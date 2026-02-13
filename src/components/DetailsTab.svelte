@@ -10,6 +10,8 @@
   import type { ContractType, ContractRecord } from '../lib/types';
   import type { Address } from 'viem';
   import { onMount, tick } from 'svelte';
+  import { toast } from '../lib/stores/toast';
+  import Skeleton from './Skeleton.svelte';
 
   // Make contract reactive to inventory changes
   let contract: ContractRecord | null = null;
@@ -155,6 +157,11 @@
       loadingProxy = false;
     }
   }
+
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard.writeText(text);
+    toast.show(`${label} copied to clipboard`);
+  }
 </script>
 
 {#if contract}
@@ -171,7 +178,16 @@
 
     <div class="field-group">
       <label for="address">Address</label>
-      <input id="address" type="text" value={contract.address} readonly />
+      <div class="copy-field">
+        <input id="address" type="text" value={contract.address} readonly />
+        <button
+          class="copy-btn"
+          on:click={() => copyToClipboard(contract.address, 'Address')}
+          title="Copy address"
+        >
+          📋
+        </button>
+      </div>
     </div>
 
     <div class="field-group">
@@ -229,15 +245,24 @@
               disabled={loadingBytecode}
               title="Refresh bytecode data"
             >
-              {#if loadingBytecode}
-                <span class="spinner-small"></span>
-              {:else}
-                ↻
-              {/if}
+              ↻
             </button>
           </div>
-          {#if contract.codehash}
-            <code class="info-value">{contract.codehash}</code>
+          {#if loadingBytecode}
+            <Skeleton width="100%" height="1.2rem" />
+          {:else if contract.codehash}
+            <div class="copy-field-inline">
+              <code class="info-value clickable" on:click={() => copyToClipboard(contract.codehash!, 'Codehash')} title="Click to copy">
+                {contract.codehash}
+              </code>
+              <button
+                class="copy-btn-small"
+                on:click={() => copyToClipboard(contract.codehash!, 'Codehash')}
+                title="Copy codehash"
+              >
+                📋
+              </button>
+            </div>
           {:else}
             <span class="info-value empty">—</span>
           {/if}
@@ -246,7 +271,9 @@
           <div class="info-header">
             <span class="info-label">Size</span>
           </div>
-          {#if contract.bytecodeSize !== undefined}
+          {#if loadingBytecode}
+            <Skeleton width="80px" height="1.2rem" />
+          {:else if contract.bytecodeSize !== undefined}
             <span class="info-value">{formatBytecodeSize(contract.bytecodeSize)}</span>
           {:else}
             <span class="info-value empty">—</span>
@@ -267,20 +294,25 @@
               disabled={loadingProxy}
               title="Refresh proxy data"
             >
-              {#if loadingProxy}
-                <span class="spinner-small"></span>
-              {:else}
-                ↻
-              {/if}
+              ↻
             </button>
           </div>
-          {#if contract.proxyType}
+          {#if loadingProxy}
+            <Skeleton width="120px" height="1.2rem" />
+          {:else if contract.proxyType}
             <span class="info-value">{formatProxyType(contract.proxyType)}</span>
           {:else}
             <span class="info-value empty">—</span>
           {/if}
         </div>
-        {#if contract.implementation}
+        {#if loadingProxy}
+          <div class="info-item">
+            <div class="info-header">
+              <span class="info-label">Implementation</span>
+            </div>
+            <Skeleton width="100%" height="1.2rem" />
+          </div>
+        {:else if contract.implementation}
           <div class="info-item">
             <div class="info-header">
               <span class="info-label">Implementation</span>
@@ -319,7 +351,7 @@
   .details-tab {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: var(--space-md);
   }
 
   .field-group {
@@ -335,9 +367,11 @@
   }
 
   label {
-    font-size: var(--font-size-sm);
-    font-weight: 500;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
     color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .label-with-indicator {
@@ -362,6 +396,12 @@
     cursor: default;
   }
 
+  input,
+  select {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-size-sm);
+  }
+
   input:focus-visible,
   select:focus-visible {
     outline: 2px solid var(--accent);
@@ -379,20 +419,80 @@
     border-radius: 2px;
   }
 
+  .copy-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .copy-field input {
+    flex: 1;
+  }
+
+  .copy-btn {
+    padding: var(--space-xs);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .copy-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+  }
+
+  .copy-field-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    width: 100%;
+  }
+
+  .copy-field-inline code {
+    flex: 1;
+  }
+
+  .copy-btn-small {
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
+    font-size: 0.75rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+  }
+
+  .copy-btn-small:hover {
+    opacity: 1;
+  }
+
+  .clickable {
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .clickable:hover {
+    color: var(--accent);
+  }
+
   .divider {
     height: 1px;
     background: var(--border-color);
-    margin: var(--space-md) 0;
+    margin: var(--space-sm) 0;
   }
 
   .section {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: var(--space-sm);
   }
 
   h3 {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--text-secondary);
   }
@@ -400,13 +500,13 @@
   .info-grid {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: var(--space-sm);
   }
 
   .info-item {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: 0.125rem;
   }
 
   .info-header {
@@ -416,12 +516,14 @@
   }
 
   .info-label {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
     color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .info-value {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-sm);
     color: var(--text-primary);
   }
 

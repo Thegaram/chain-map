@@ -3,6 +3,7 @@
   import TagFilter from './components/TagFilter.svelte';
   import ContractTable from './components/ContractTable.svelte';
   import Drawer from './components/Drawer.svelte';
+  import Toast from './components/Toast.svelte';
   import { inventory } from './lib/stores/inventory';
   import { isDirty, restoreLastFile } from './lib/stores/persistence';
   import { drawerOpen } from './lib/stores/selectedContract';
@@ -68,6 +69,8 @@
   </div>
 </div>
 
+<Toast />
+
 <style>
   .app-container {
     display: flex;
@@ -82,7 +85,6 @@
   }
 
   .top-section.dimmed {
-    background: rgba(0, 0, 0, 0.2);
     filter: blur(2px);
     pointer-events: none;
   }

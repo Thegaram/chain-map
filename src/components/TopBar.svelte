@@ -2,7 +2,10 @@
   import { filters } from '../lib/stores/filters';
   import { settings } from '../lib/stores/settings';
   import { chains } from '../lib/stores/chains';
+  import { inventory } from '../lib/stores/inventory';
   import { saveInventory, loadInventory, isDirty } from '../lib/stores/persistence';
+  import { getBytecodeInfo } from '../lib/chain/bytecode';
+  import { toast } from '../lib/stores/toast';
   import ContractFormModal from './ContractFormModal.svelte';
   import KeyboardHints from './KeyboardHints.svelte';
   import FileMenu from './FileMenu.svelte';
@@ -10,10 +13,14 @@
   import type { ShortcutHandler } from '../lib/keyboardShortcuts';
   import { SHORTCUTS, THEME_ICONS } from '../lib/constants';
   import { onMount } from 'svelte';
+  import type { Address } from 'viem';
 
   let currentTheme: 'light' | 'dark' = 'light';
   let showAddModal = false;
   let searchInput: HTMLInputElement;
+  let bulkRefreshing = false;
+
+  $: contractsWithoutCodehash = $inventory.filter(c => !c.codehash).length;
 
   function toggleTheme() {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -24,6 +31,51 @@
 
   function handleAddRecord() {
     showAddModal = true;
+  }
+
+  async function handleBulkRefreshCodehash() {
+    const contractsToRefresh = $inventory.filter(c => !c.codehash);
+
+    if (contractsToRefresh.length === 0) {
+      toast.show('All contracts already have codehashes', 'info');
+      return;
+    }
+
+    if (!confirm(`Refresh codehash for ${contractsToRefresh.length} contracts?`)) {
+      return;
+    }
+
+    bulkRefreshing = true;
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const contract of contractsToRefresh) {
+      try {
+        const bytecodeInfo = await getBytecodeInfo(
+          contract.address as Address,
+          contract.chainId
+        );
+
+        if (!bytecodeInfo.isEmpty) {
+          inventory.updateContract(contract.id, {
+            codehash: bytecodeInfo.codehash,
+            bytecodeSize: bytecodeInfo.size
+          });
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Failed to fetch codehash for ${contract.label}:`, err);
+        errorCount++;
+      }
+    }
+
+    bulkRefreshing = false;
+
+    if (errorCount > 0) {
+      toast.show(`Refreshed ${successCount} codehashes, ${errorCount} failed`, 'info');
+    } else {
+      toast.show(`Successfully refreshed ${successCount} codehashes`);
+    }
   }
 
   // Initialize theme on mount
@@ -77,6 +129,23 @@
         key: SHORTCUTS.REFRESH,
         handler: () => console.log('Refresh RPC - Phase 4'),
         description: 'Refresh RPC data'
+      },
+      {
+        key: 'z',
+        ctrl: true,
+        handler: () => {
+          inventory.undo();
+        },
+        description: 'Undo'
+      },
+      {
+        key: 'z',
+        ctrl: true,
+        shift: true,
+        handler: () => {
+          inventory.redo();
+        },
+        description: 'Redo'
       }
     ];
 
@@ -132,6 +201,21 @@
   <div class="top-bar-section actions">
     <FileMenu />
 
+    {#if contractsWithoutCodehash > 0}
+      <button
+        class="action-btn"
+        on:click={handleBulkRefreshCodehash}
+        disabled={bulkRefreshing}
+        title="Refresh codehash for {contractsWithoutCodehash} contracts"
+      >
+        {#if bulkRefreshing}
+          <span class="spinner-small"></span>
+        {:else}
+          ↻ {contractsWithoutCodehash}
+        {/if}
+      </button>
+    {/if}
+
     <button class="action-btn" on:click={handleAddRecord} title="Add record (N)">
       +
     </button>
@@ -148,8 +232,8 @@
   .top-bar {
     display: flex;
     align-items: center;
-    gap: var(--space-lg);
-    padding: var(--space-lg) var(--space-xl);
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
     border-bottom: 1px solid var(--border-light);
     background: var(--bg-primary);
     flex-shrink: 0;
@@ -217,6 +301,25 @@
   .action-btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .spinner-small {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 </style>
 

@@ -4,6 +4,8 @@
 
 import { keyboardFocusIndex, focusedContractId } from './stores/keyboardFocus';
 import { openDrawer, drawerOpen } from './stores/selectedContract';
+import { inventory } from './stores/inventory';
+import { toast } from './stores/toast';
 import { get } from 'svelte/store';
 
 export interface ShortcutHandler {
@@ -35,6 +37,26 @@ export function handleKeydown(event: KeyboardEvent) {
     target.tagName === 'INPUT' ||
     target.tagName === 'TEXTAREA' ||
     target.isContentEditable;
+
+  // Handle undo/redo (Cmd+Z / Cmd+Shift+Z)
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      // Redo
+      const success = inventory.redo();
+      if (success) {
+        toast.show('Redone', 'info');
+      }
+    } else {
+      // Undo
+      const success = inventory.undo();
+      if (success) {
+        toast.show('Undone', 'info');
+      }
+    }
+    return;
+  }
 
   // Handle arrow key navigation (unless in input)
   if (!isInInput && !get(drawerOpen)) {

@@ -4,6 +4,27 @@
   import { drawerOpen, selectedContractId, activeTab, closeDrawer } from '../lib/stores/selectedContract';
   import { inventory } from '../lib/stores/inventory';
   import { UI_MESSAGES } from '../lib/constants';
+  import { onMount } from 'svelte';
+
+  const MIN_WIDTH = 400;
+  const MAX_WIDTH = 1200;
+  const DEFAULT_WIDTH = 600;
+
+  let drawerWidth = DEFAULT_WIDTH;
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  // Load saved width from localStorage
+  onMount(() => {
+    const saved = localStorage.getItem('drawerWidth');
+    if (saved) {
+      const width = parseInt(saved);
+      if (width >= MIN_WIDTH && width <= MAX_WIDTH) {
+        drawerWidth = width;
+      }
+    }
+  });
 
   function handleTabChange(tab: 'details' | 'abi') {
     activeTab.set(tab);
@@ -45,13 +66,46 @@
       closeDrawer();
     }
   }
+
+  function handleResizeStart(event: MouseEvent) {
+    isResizing = true;
+    startX = event.clientX;
+    startWidth = drawerWidth;
+    event.preventDefault();
+  }
+
+  function handleResizeMove(event: MouseEvent) {
+    if (!isResizing) return;
+
+    const deltaX = startX - event.clientX;
+    const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + deltaX));
+    drawerWidth = newWidth;
+  }
+
+  function handleResizeEnd() {
+    if (isResizing) {
+      isResizing = false;
+      localStorage.setItem('drawerWidth', drawerWidth.toString());
+    }
+  }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window
+  on:keydown={handleKeydown}
+  on:mousemove={handleResizeMove}
+  on:mouseup={handleResizeEnd}
+/>
 
 {#if $drawerOpen}
   <div class="drawer-backdrop" on:click={handleBackdropClick} role="button" tabindex="-1">
-    <aside class="drawer">
+    <aside class="drawer" style="width: {drawerWidth}px;">
+      <div
+        class="resize-handle"
+        on:mousedown={handleResizeStart}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize drawer"
+      ></div>
       <div class="drawer-header">
         <div class="tabs" role="tablist">
           <button
@@ -113,7 +167,7 @@
   }
 
   .drawer {
-    width: 600px;
+    position: relative;
     max-width: 90vw;
     background: var(--bg-primary);
     border-left: 1px solid var(--border-color);
@@ -122,11 +176,28 @@
     box-shadow: var(--shadow-md);
   }
 
+  .resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: ew-resize;
+    z-index: 10;
+    transition: background 0.15s ease;
+  }
+
+  .resize-handle:hover,
+  .resize-handle:active {
+    background: var(--accent);
+    opacity: 0.3;
+  }
+
   .drawer-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-secondary);
   }
@@ -189,6 +260,6 @@
   .drawer-content {
     flex: 1;
     overflow: auto;
-    padding: var(--space-lg);
+    padding: var(--space-md);
   }
 </style>

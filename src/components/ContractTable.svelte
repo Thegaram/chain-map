@@ -4,10 +4,21 @@
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer, selectedContractId } from '../lib/stores/selectedContract';
   import { focusedContractId } from '../lib/stores/keyboardFocus';
+  import { inventory } from '../lib/stores/inventory';
   import { formatGitHubSource, getGitHubUrl, getExplorerAddressUrl } from '../lib/links';
   import { onMount, tick } from 'svelte';
+  import ContextMenu from './ContextMenu.svelte';
+  import type { MenuItem } from './ContextMenu.svelte';
+  import type { ContractRecord } from '../lib/types';
+  import { toast } from '../lib/stores/toast';
 
   let rowElements: { [key: string]: HTMLTableRowElement } = {};
+
+  // Context menu state
+  let contextMenuVisible = false;
+  let contextMenuX = 0;
+  let contextMenuY = 0;
+  let contextMenuContract: ContractRecord | null = null;
 
   // Auto-scroll focused row into view
   $: if ($focusedContractId) {
@@ -31,6 +42,62 @@
     if ($sort.field !== field) return '';
     return $sort.direction === 'asc' ? '↑' : '↓';
   }
+
+  function handleContextMenu(event: MouseEvent, contract: ContractRecord) {
+    event.preventDefault();
+    contextMenuContract = contract;
+    contextMenuX = event.clientX;
+    contextMenuY = event.clientY;
+    contextMenuVisible = true;
+  }
+
+  function handleContextMenuSelect(event: CustomEvent<string>) {
+    const action = event.detail;
+    if (!contextMenuContract) return;
+
+    const contract = contextMenuContract;
+    const chain = $chainMap.get(contract.chainId);
+
+    switch (action) {
+      case 'copy-address':
+        navigator.clipboard.writeText(contract.address);
+        toast.show('Address copied to clipboard');
+        break;
+      case 'open-explorer':
+        const explorerUrl = getExplorerAddressUrl(contract.address, chain);
+        if (explorerUrl) {
+          window.open(explorerUrl, '_blank');
+        }
+        break;
+      case 'duplicate':
+        // Create a copy of the contract
+        inventory.addContract({
+          label: `${contract.label} (Copy)`,
+          address: contract.address,
+          chainId: contract.chainId,
+          type: contract.type,
+          tags: [...contract.tags],
+          source: contract.source,
+        });
+        break;
+      case 'delete':
+        if (confirm(`Delete "${contract.label}"?`)) {
+          inventory.deleteContract(contract.id);
+        }
+        break;
+    }
+
+    contextMenuVisible = false;
+    contextMenuContract = null;
+  }
+
+  $: contextMenuItems = contextMenuContract ? [
+    { label: 'Copy Address', icon: '📋', action: 'copy-address' },
+    { label: 'Open in Explorer', icon: '🔗', action: 'open-explorer' },
+    { divider: true, label: '', action: '' },
+    { label: 'Duplicate', icon: '📄', action: 'duplicate' },
+    { label: 'Delete', icon: '🗑️', action: 'delete', danger: true },
+  ] as MenuItem[] : [];
 </script>
 
 <div class="table-container">
@@ -61,6 +128,7 @@
           class:selected={$selectedContractId === contract.id}
           class:focused={$focusedContractId === contract.id}
           on:click={() => openDrawer(contract.id)}
+          on:contextmenu={(e) => handleContextMenu(e, contract)}
           bind:this={rowElements[contract.id]}
         >
           <td class="label-cell">{contract.label}</td>
@@ -124,6 +192,14 @@
   {/if}
 </div>
 
+<ContextMenu
+  bind:visible={contextMenuVisible}
+  x={contextMenuX}
+  y={contextMenuY}
+  items={contextMenuItems}
+  on:select={handleContextMenuSelect}
+/>
+
 <style>
   .table-container {
     flex: 1;
@@ -146,7 +222,7 @@
 
   th {
     text-align: left;
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     font-weight: 600;
     color: var(--text-secondary);
     border-bottom: 1px solid var(--border-color);
@@ -195,7 +271,7 @@
   }
 
   td {
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     color: var(--text-primary);
   }
 
