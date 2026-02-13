@@ -1,72 +1,163 @@
 <script lang="ts">
   import { selectedContractId } from '../lib/stores/selectedContract';
   import { inventory } from '../lib/stores/inventory';
+  import { chainMap } from '../lib/stores/chains';
+  import { getBytecodeInfo, compareCodehash, formatBytecodeSize } from '../lib/chain/bytecode';
+  import { detectProxy, formatProxyType } from '../lib/chain/proxy';
+  import type { Address } from 'viem';
 
   $: contract = $selectedContractId ? inventory.getContract($selectedContractId) : null;
+  $: chain = contract ? $chainMap.get(contract.chainId) : null;
 
-  // Placeholder data - RPC calls will be implemented in Phase 4
-  const onchainData = {
-    codehash: '0xabc123def456789...',
-    bytecodeSize: '12,345 bytes',
-    isProxy: false,
-    implementation: null,
-    verified: false
-  };
+  let loading = false;
+  let error: string | null = null;
+  let onchainData: {
+    codehash: string;
+    bytecodeSize: string;
+    isProxy: boolean;
+    proxyType: string;
+    implementation: string | null;
+    codehashMatch: boolean;
+    codehashReason?: string;
+  } | null = null;
+
+  async function fetchOnChainData() {
+    if (!contract || !chain) return;
+
+    loading = true;
+    error = null;
+
+    try {
+      // Fetch bytecode info
+      const bytecodeInfo = await getBytecodeInfo(
+        contract.address as Address,
+        contract.chainId
+      );
+
+      if (bytecodeInfo.isEmpty) {
+        error = 'No bytecode found at this address';
+        onchainData = null;
+        return;
+      }
+
+      // Detect proxy
+      const proxyInfo = await detectProxy(
+        contract.address as Address,
+        contract.chainId
+      );
+
+      // Compare codehash
+      const comparison = compareCodehash(bytecodeInfo.codehash, contract.expectedCodehash);
+
+      onchainData = {
+        codehash: bytecodeInfo.codehash,
+        bytecodeSize: formatBytecodeSize(bytecodeInfo.size),
+        isProxy: proxyInfo.isProxy,
+        proxyType: formatProxyType(proxyInfo.type),
+        implementation: proxyInfo.implementation || null,
+        codehashMatch: comparison.matches,
+        codehashReason: comparison.reason
+      };
+    } catch (err: any) {
+      error = err.message || 'Failed to fetch on-chain data';
+      onchainData = null;
+    } finally {
+      loading = false;
+    }
+  }
+
+  // Auto-fetch when contract changes
+  $: if (contract) {
+    fetchOnChainData();
+  }
+
+  function getExplorerUrl(type: 'address' | 'bytecode'): string | null {
+    if (!contract || !chain?.explorerUrl) return null;
+
+    if (type === 'address') {
+      return `${chain.explorerUrl}/address/${contract.address}`;
+    } else {
+      return `${chain.explorerUrl}/address/${contract.address}#code`;
+    }
+  }
 </script>
 
 <div class="onchain-tab">
-  <div class="section">
-    <h3>Runtime Bytecode</h3>
-    <div class="info-grid">
-      <div class="info-item">
-        <span class="info-label">Codehash</span>
-        <code class="info-value">{onchainData.codehash}</code>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Size</span>
-        <span class="info-value">{onchainData.bytecodeSize}</span>
-      </div>
+  {#if loading}
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Fetching on-chain data...</p>
     </div>
-  </div>
-
-  <div class="section">
-    <h3>Proxy Detection</h3>
-    <div class="info-grid">
-      <div class="info-item">
-        <span class="info-label">Is Proxy</span>
-        <span class="info-value">{onchainData.isProxy ? 'Yes' : 'No'}</span>
-      </div>
-      {#if onchainData.implementation}
+  {:else if error}
+    <div class="error-state">
+      <p class="error-message">⚠ {error}</p>
+      <button class="btn btn-primary" on:click={fetchOnChainData}>
+        Retry
+      </button>
+    </div>
+  {:else if onchainData}
+    <div class="section">
+      <h3>Runtime Bytecode</h3>
+      <div class="info-grid">
         <div class="info-item">
-          <span class="info-label">Implementation</span>
-          <code class="info-value">{onchainData.implementation}</code>
+          <span class="info-label">Codehash</span>
+          <code class="info-value">{onchainData.codehash}</code>
         </div>
-      {/if}
+        <div class="info-item">
+          <span class="info-label">Size</span>
+          <span class="info-value">{onchainData.bytecodeSize}</span>
+        </div>
+        {#if contract?.expectedCodehash}
+          <div class="info-item">
+            <span class="info-label">Match Expected</span>
+            <span class="info-value" class:match={onchainData.codehashMatch} class:mismatch={!onchainData.codehashMatch}>
+              {onchainData.codehashMatch ? '✓ Matches' : '✗ Mismatch'}
+            </span>
+          </div>
+        {/if}
+      </div>
     </div>
-  </div>
 
-  <div class="section">
-    <h3>Verification Status</h3>
-    <div class="verification-status">
-      {#if onchainData.verified}
-        <span class="status-badge verified">✓ Verified</span>
-      {:else}
-        <span class="status-badge unverified">? Unverified</span>
-      {/if}
+    <div class="section">
+      <h3>Proxy Detection</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Type</span>
+          <span class="info-value">{onchainData.proxyType}</span>
+        </div>
+        {#if onchainData.implementation}
+          <div class="info-item">
+            <span class="info-label">Implementation</span>
+            <code class="info-value">{onchainData.implementation}</code>
+          </div>
+        {/if}
+      </div>
     </div>
-  </div>
 
-  <div class="section">
-    <h3>Explorer Links</h3>
-    <div class="link-list">
-      <a href="#" class="explorer-link">View on Etherscan →</a>
-      <a href="#" class="explorer-link">View Bytecode →</a>
+    {#if chain?.explorerUrl}
+      <div class="section">
+        <h3>Explorer Links</h3>
+        <div class="link-list">
+          <a href={getExplorerUrl('address')} target="_blank" rel="noopener" class="explorer-link">
+            View on {chain.shortName} Explorer →
+          </a>
+          <a href={getExplorerUrl('bytecode')} target="_blank" rel="noopener" class="explorer-link">
+            View Bytecode →
+          </a>
+        </div>
+      </div>
+    {/if}
+
+    <div class="actions">
+      <button class="btn btn-primary" on:click={fetchOnChainData}>
+        Refresh RPC Data
+      </button>
     </div>
-  </div>
-
-  <div class="actions">
-    <button class="btn btn-primary">Refresh RPC Data</button>
-  </div>
+  {:else}
+    <div class="empty-state">
+      <p>Click "Refresh RPC Data" to fetch on-chain information</p>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -179,5 +270,43 @@
   .btn-primary:hover {
     background: var(--accent-hover);
     border-color: var(--accent-hover);
+  }
+
+  .loading-state,
+  .error-state,
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2xl);
+    gap: var(--space-lg);
+    text-align: center;
+    color: var(--text-secondary);
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .error-message {
+    color: #e03131;
+  }
+
+  .match {
+    color: #2f9e44;
+  }
+
+  .mismatch {
+    color: #e03131;
   }
 </style>
