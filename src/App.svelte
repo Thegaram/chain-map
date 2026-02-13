@@ -1,8 +1,10 @@
 <script lang="ts">
   import TopBar from './components/TopBar.svelte';
+  import TagFilter from './components/TagFilter.svelte';
   import ContractTable from './components/ContractTable.svelte';
   import Drawer from './components/Drawer.svelte';
   import { inventory } from './lib/stores/inventory';
+  import { handleKeydown } from './lib/keyboardShortcuts';
   import { onMount } from 'svelte';
 
   // Add some sample data on first load
@@ -45,8 +47,11 @@
   });
 </script>
 
+<svelte:window on:keydown={handleKeydown} />
+
 <div class="app-container">
   <TopBar />
+  <TagFilter />
 
   <div class="main-content">
     <ContractTable />

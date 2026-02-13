@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { filteredContracts } from '../lib/stores/filters';
+  import { sortedContracts, sort } from '../lib/stores/sort';
+  import type { SortField } from '../lib/stores/sort';
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer } from '../lib/stores/selectedContract';
 
@@ -21,24 +22,41 @@
       default: return '?';
     }
   }
+
+  function handleSort(field: SortField) {
+    sort.toggleSort(field);
+  }
+
+  function getSortIcon(field: SortField): string {
+    if ($sort.field !== field) return '';
+    return $sort.direction === 'asc' ? '↑' : '↓';
+  }
 </script>
 
 <div class="table-container">
   <table class="contract-table">
     <thead>
       <tr>
-        <th>Label</th>
-        <th>Chain</th>
+        <th class="sortable" on:click={() => handleSort('label')}>
+          Label {getSortIcon('label')}
+        </th>
+        <th class="sortable" on:click={() => handleSort('chain')}>
+          Chain {getSortIcon('chain')}
+        </th>
         <th>Address</th>
-        <th>Type</th>
+        <th class="sortable" on:click={() => handleSort('type')}>
+          Type {getSortIcon('type')}
+        </th>
         <th>Codehash</th>
         <th>Source</th>
         <th>Tags</th>
-        <th>Status</th>
+        <th class="sortable" on:click={() => handleSort('status')}>
+          Status {getSortIcon('status')}
+        </th>
       </tr>
     </thead>
     <tbody>
-      {#each $filteredContracts as contract (contract.id)}
+      {#each $sortedContracts as contract (contract.id)}
         <tr class="contract-row" on:click={() => openDrawer(contract.id)}>
           <td class="label-cell">{contract.label}</td>
           <td>{$chainMap.get(contract.chainId)?.shortName || `Chain ${contract.chainId}`}</td>
@@ -59,7 +77,7 @@
     </tbody>
   </table>
 
-  {#if $filteredContracts.length === 0}
+  {#if $sortedContracts.length === 0}
     <div class="empty-state">
       <p>No contracts found</p>
       <p class="empty-hint">Press + to add a contract or adjust filters</p>
@@ -94,6 +112,17 @@
     color: var(--text-secondary);
     border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
+  }
+
+  th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.1s ease;
+  }
+
+  th.sortable:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .contract-row {

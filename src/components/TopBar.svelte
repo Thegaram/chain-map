@@ -2,10 +2,15 @@
   import { filters } from '../lib/stores/filters';
   import { settings } from '../lib/stores/settings';
   import { chains } from '../lib/stores/chains';
-  import { inventory } from '../lib/stores/inventory';
+  import ContractFormModal from './ContractFormModal.svelte';
+  import KeyboardHints from './KeyboardHints.svelte';
+  import { registerShortcut, unregisterShortcut } from '../lib/keyboardShortcuts';
+  import type { ShortcutHandler } from '../lib/keyboardShortcuts';
   import { onMount } from 'svelte';
 
   let currentTheme: 'light' | 'dark' = 'light';
+  let showAddModal = false;
+  let searchInput: HTMLInputElement;
 
   function toggleTheme() {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -15,21 +20,7 @@
   }
 
   function handleAddRecord() {
-    // Add record logic will be implemented in Phase 2
-    const label = prompt('Contract label:');
-    if (!label) return;
-
-    const address = prompt('Contract address:');
-    if (!address) return;
-
-    inventory.addContract({
-      label,
-      address,
-      chainId: 1,
-      type: 'implementation',
-      tags: [],
-      verificationStatus: 'unverified'
-    });
+    showAddModal = true;
   }
 
   function handleImportExport() {
@@ -48,12 +39,39 @@
     const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     currentTheme = (stored as 'light' | 'dark') || system;
     document.documentElement.setAttribute('data-theme', currentTheme);
+
+    // Register keyboard shortcuts
+    const shortcuts: ShortcutHandler[] = [
+      {
+        key: 'k',
+        ctrl: true, // Will match Cmd on Mac or Ctrl on Windows/Linux
+        handler: () => searchInput?.focus(),
+        description: 'Focus search'
+      },
+      {
+        key: 'n',
+        handler: handleAddRecord,
+        description: 'Add new contract'
+      },
+      {
+        key: 'r',
+        handler: () => console.log('Refresh RPC - Phase 4'),
+        description: 'Refresh RPC data'
+      }
+    ];
+
+    shortcuts.forEach(s => registerShortcut(s));
+
+    return () => {
+      shortcuts.forEach(s => unregisterShortcut(s));
+    };
   });
 </script>
 
 <header class="top-bar">
   <div class="top-bar-section">
     <input
+      bind:this={searchInput}
       type="text"
       class="search-input"
       placeholder="Search contracts... (⌘K)"
@@ -99,6 +117,8 @@
     <button class="action-btn" on:click={handleImportExport} title="Import/Export">
       ⇅
     </button>
+
+    <KeyboardHints />
 
     <button class="action-btn" on:click={handleSettings} title="Settings">
       ⚙
@@ -164,3 +184,8 @@
     transform: translateY(1px);
   }
 </style>
+
+<ContractFormModal
+  open={showAddModal}
+  onClose={() => showAddModal = false}
+/>
