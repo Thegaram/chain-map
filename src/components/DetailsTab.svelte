@@ -13,7 +13,6 @@
   let editedType: ContractType = 'implementation';
   let editedTags = '';
   let editedSource = '';
-  let editedCodehash = '';
   let editedNotes = '';
 
   $: if (contract) {
@@ -22,7 +21,6 @@
     editedType = contract.type;
     editedTags = contract.tags.join(', ');
     editedSource = contract.source || '';
-    editedCodehash = contract.expectedCodehash || '';
     editedNotes = contract.notes || '';
   }
 
@@ -34,8 +32,7 @@
       chainId: editedChainId,
       type: editedType,
       tags: parseTags(editedTags),
-      source: editedSource || undefined,
-      expectedCodehash: editedCodehash || undefined,
+      source: editedSource.trim() || undefined,
       notes: editedNotes || undefined,
     });
 
@@ -89,13 +86,8 @@
     </div>
 
     <div class="field-group">
-      <label for="source">Source Repository</label>
-      <input id="source" type="text" bind:value={editedSource} />
-    </div>
-
-    <div class="field-group">
-      <label for="codehash">Expected Codehash</label>
-      <input id="codehash" type="text" bind:value={editedCodehash} />
+      <label for="source">Source Repository (paste GitHub URL or use owner/repo@ref)</label>
+      <input id="source" type="text" bind:value={editedSource} placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL" />
     </div>
 
     <div class="field-group">

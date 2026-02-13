@@ -2,8 +2,9 @@
   import { selectedContractId } from '../lib/stores/selectedContract';
   import { inventory } from '../lib/stores/inventory';
   import { chainMap } from '../lib/stores/chains';
-  import { getBytecodeInfo, compareCodehash, formatBytecodeSize } from '../lib/chain/bytecode';
+  import { getBytecodeInfo, formatBytecodeSize } from '../lib/chain/bytecode';
   import { detectProxy, formatProxyType } from '../lib/chain/proxy';
+  import { getExplorerAddressUrl, getExplorerBytecodeUrl } from '../lib/links';
   import type { Address } from 'viem';
 
   $: contract = $selectedContractId ? inventory.getContract($selectedContractId) : null;
@@ -17,8 +18,6 @@
     isProxy: boolean;
     proxyType: string;
     implementation: string | null;
-    codehashMatch: boolean;
-    codehashReason?: string;
   } | null = null;
 
   async function fetchOnChainData() {
@@ -46,17 +45,12 @@
         contract.chainId
       );
 
-      // Compare codehash
-      const comparison = compareCodehash(bytecodeInfo.codehash, contract.expectedCodehash);
-
       onchainData = {
         codehash: bytecodeInfo.codehash,
         bytecodeSize: formatBytecodeSize(bytecodeInfo.size),
         isProxy: proxyInfo.isProxy,
         proxyType: formatProxyType(proxyInfo.type),
-        implementation: proxyInfo.implementation || null,
-        codehashMatch: comparison.matches,
-        codehashReason: comparison.reason
+        implementation: proxyInfo.implementation || null
       };
     } catch (err: any) {
       error = err.message || 'Failed to fetch on-chain data';
@@ -71,23 +65,6 @@
     fetchOnChainData();
   }
 
-  function getExplorerUrl(type: 'address' | 'bytecode'): string | null {
-    if (!contract || !chain?.explorerUrl) return null;
-
-    if (type === 'address') {
-      return `${chain.explorerUrl}/address/${contract.address}`;
-    } else {
-      return `${chain.explorerUrl}/address/${contract.address}#code`;
-    }
-  }
-
-  function saveAsExpected() {
-    if (!contract || !onchainData) return;
-
-    inventory.updateContract(contract.id, {
-      expectedCodehash: onchainData.codehash
-    });
-  }
 </script>
 
 <div class="onchain-tab">
@@ -115,18 +92,6 @@
           <span class="info-label">Size</span>
           <span class="info-value">{onchainData.bytecodeSize}</span>
         </div>
-        <div class="info-item">
-          <span class="info-label">Verification</span>
-          {#if contract?.expectedCodehash}
-            <span class="info-value" class:match={onchainData.codehashMatch} class:mismatch={!onchainData.codehashMatch}>
-              {onchainData.codehashMatch ? '✓ Matches expected' : '✗ Does not match expected'}
-            </span>
-          {:else}
-            <button class="btn-inline" on:click={saveAsExpected}>
-              Save as Expected
-            </button>
-          {/if}
-        </div>
       </div>
     </div>
 
@@ -146,14 +111,16 @@
       </div>
     </div>
 
-    {#if chain?.explorerUrl}
+    {@const addressUrl = getExplorerAddressUrl(contract.address, chain)}
+    {@const bytecodeUrl = getExplorerBytecodeUrl(contract.address, chain)}
+    {#if addressUrl}
       <div class="section">
         <h3>Explorer Links</h3>
         <div class="link-list">
-          <a href={getExplorerUrl('address')} target="_blank" rel="noopener" class="explorer-link">
-            View on {chain.shortName} Explorer →
+          <a href={addressUrl} target="_blank" rel="noopener" class="explorer-link">
+            View on {chain?.shortName} Explorer →
           </a>
-          <a href={getExplorerUrl('bytecode')} target="_blank" rel="noopener" class="explorer-link">
+          <a href={bytecodeUrl} target="_blank" rel="noopener" class="explorer-link">
             View Bytecode →
           </a>
         </div>
@@ -288,29 +255,5 @@
 
   .error-message {
     color: #e03131;
-  }
-
-  .match {
-    color: #2f9e44;
-  }
-
-  .mismatch {
-    color: #e03131;
-  }
-
-  .btn-inline {
-    padding: var(--space-xs) var(--space-md);
-    border-radius: 4px;
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--accent);
-    background: transparent;
-    border: 1px solid var(--accent);
-    transition: all 0.15s ease;
-    cursor: pointer;
-  }
-
-  .btn-inline:hover {
-    background: rgba(34, 139, 230, 0.1);
   }
 </style>

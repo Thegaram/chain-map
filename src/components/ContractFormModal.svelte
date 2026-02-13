@@ -164,12 +164,15 @@
       </div>
 
       <div class="field-group span-2">
-        <label for="source">Source Repository</label>
+        <label for="source">
+          Source Repository
+          <span class="help-text-inline">(paste GitHub URL or use owner/repo@ref)</span>
+        </label>
         <input
           id="source"
           type="text"
           bind:value={source}
-          placeholder="https://github.com/..."
+          placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL"
         />
       </div>
 

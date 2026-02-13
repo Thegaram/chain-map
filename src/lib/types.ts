@@ -14,7 +14,6 @@ export interface ContractRecord {
   type: ContractType;
   tags: string[];
   source?: string;
-  expectedCodehash?: string;
   abiId?: string;
   verificationStatus: VerificationStatus;
   notes?: string;

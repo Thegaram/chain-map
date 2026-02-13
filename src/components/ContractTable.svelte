@@ -4,14 +4,10 @@
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer } from '../lib/stores/selectedContract';
   import { STATUS_ICONS } from '../lib/constants';
+  import { formatGitHubSource, getGitHubUrl, getExplorerAddressUrl } from '../lib/links';
 
   function shortenAddress(address: string): string {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  }
-
-  function shortenHash(hash: string | undefined): string {
-    if (!hash) return '—';
-    return `${hash.slice(0, 10)}...`;
   }
 
   function getStatusIcon(status: string): string {
@@ -48,7 +44,6 @@
         <th class="sortable" on:click={() => handleSort('type')}>
           Type {getSortIcon('type')}
         </th>
-        <th>Codehash</th>
         <th>Source</th>
         <th>Tags</th>
         <th class="sortable" on:click={() => handleSort('status')}>
@@ -58,13 +53,43 @@
     </thead>
     <tbody>
       {#each $sortedContracts as contract (contract.id)}
+        {@const chain = $chainMap.get(contract.chainId)}
+        {@const explorerUrl = getExplorerAddressUrl(contract.address, chain)}
+        {@const githubUrl = contract.source ? getGitHubUrl(contract.source) : null}
         <tr class="contract-row" on:click={() => openDrawer(contract.id)}>
           <td class="label-cell">{contract.label}</td>
-          <td>{$chainMap.get(contract.chainId)?.shortName || `Chain ${contract.chainId}`}</td>
-          <td class="address-cell">{shortenAddress(contract.address)}</td>
+          <td>{chain?.shortName || `Chain ${contract.chainId}`}</td>
+          <td class="address-cell">
+            {#if explorerUrl}
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener"
+                on:click|stopPropagation
+                class="table-link"
+              >
+                {shortenAddress(contract.address)}
+              </a>
+            {:else}
+              {shortenAddress(contract.address)}
+            {/if}
+          </td>
           <td class="type-cell">{contract.type}</td>
-          <td class="hash-cell">{shortenHash(contract.expectedCodehash)}</td>
-          <td class="source-cell">{contract.source || '—'}</td>
+          <td class="source-cell">
+            {#if githubUrl}
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener"
+                on:click|stopPropagation
+                class="table-link"
+              >
+                {formatGitHubSource(contract.source)}
+              </a>
+            {:else}
+              {contract.source || '—'}
+            {/if}
+          </td>
           <td>
             <div class="tags">
               {#each contract.tags as tag}
@@ -145,8 +170,7 @@
     font-weight: 500;
   }
 
-  .address-cell,
-  .hash-cell {
+  .address-cell {
     font-family: var(--font-mono);
     color: var(--text-secondary);
     font-size: 0.85rem;
@@ -159,6 +183,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .table-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .table-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
   }
 
   .tags {
