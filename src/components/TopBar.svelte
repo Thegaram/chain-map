@@ -2,8 +2,10 @@
   import { filters } from '../lib/stores/filters';
   import { settings } from '../lib/stores/settings';
   import { chains } from '../lib/stores/chains';
+  import { saveInventory, loadInventory, isDirty } from '../lib/stores/persistence';
   import ContractFormModal from './ContractFormModal.svelte';
   import KeyboardHints from './KeyboardHints.svelte';
+  import FileMenu from './FileMenu.svelte';
   import { registerShortcut, unregisterShortcut } from '../lib/keyboardShortcuts';
   import type { ShortcutHandler } from '../lib/keyboardShortcuts';
   import { onMount } from 'svelte';
@@ -23,10 +25,6 @@
     showAddModal = true;
   }
 
-  function handleImportExport() {
-    // Import/export logic will be implemented in Phase 3
-    console.log('Import/Export - Phase 3');
-  }
 
   function handleSettings() {
     // Settings modal will be implemented later
@@ -44,7 +42,7 @@
     const shortcuts: ShortcutHandler[] = [
       {
         key: 'k',
-        ctrl: true, // Will match Cmd on Mac or Ctrl on Windows/Linux
+        ctrl: true,
         handler: () => searchInput?.focus(),
         description: 'Focus search'
       },
@@ -52,6 +50,33 @@
         key: 'n',
         handler: handleAddRecord,
         description: 'Add new contract'
+      },
+      {
+        key: 's',
+        ctrl: true,
+        handler: async () => {
+          if ($isDirty) {
+            await saveInventory(false);
+          }
+        },
+        description: 'Save inventory'
+      },
+      {
+        key: 's',
+        ctrl: true,
+        shift: true,
+        handler: async () => {
+          await saveInventory(true);
+        },
+        description: 'Save as...'
+      },
+      {
+        key: 'o',
+        ctrl: true,
+        handler: async () => {
+          await loadInventory();
+        },
+        description: 'Open inventory'
       },
       {
         key: 'r',
@@ -110,12 +135,10 @@
   </div>
 
   <div class="top-bar-section actions">
+    <FileMenu />
+
     <button class="action-btn" on:click={handleAddRecord} title="Add record (N)">
       +
-    </button>
-
-    <button class="action-btn" on:click={handleImportExport} title="Import/Export">
-      ⇅
     </button>
 
     <KeyboardHints />

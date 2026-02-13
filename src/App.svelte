@@ -4,12 +4,25 @@
   import ContractTable from './components/ContractTable.svelte';
   import Drawer from './components/Drawer.svelte';
   import { inventory } from './lib/stores/inventory';
+  import { isDirty, restoreLastFile } from './lib/stores/persistence';
   import { handleKeydown } from './lib/keyboardShortcuts';
   import { onMount } from 'svelte';
 
-  // Add some sample data on first load
-  onMount(() => {
-    if ($inventory.length === 0) {
+  // Warn before leaving with unsaved changes
+  function handleBeforeUnload(event: BeforeUnloadEvent) {
+    if ($isDirty) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  }
+
+  // Restore last opened file or add sample data
+  onMount(async () => {
+    // Try to restore last opened file
+    const restored = await restoreLastFile();
+
+    // If no file was restored and inventory is empty, add sample data
+    if (!restored && $inventory.length === 0) {
       inventory.addContract({
         label: 'USDC Token',
         address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
@@ -47,7 +60,7 @@
   });
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={handleKeydown} on:beforeunload={handleBeforeUnload} />
 
 <div class="app-container">
   <TopBar />
