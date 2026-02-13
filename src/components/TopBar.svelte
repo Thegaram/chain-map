@@ -157,9 +157,9 @@
   .top-bar {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    border-bottom: 1px solid var(--border-color);
+    gap: var(--space-lg);
+    padding: var(--space-lg) var(--space-xl);
+    border-bottom: 1px solid var(--border-light);
     background: var(--bg-primary);
     flex-shrink: 0;
   }
@@ -167,7 +167,7 @@
   .top-bar-section {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-md);
   }
 
   .top-bar-section.filters {
@@ -175,36 +175,47 @@
   }
 
   .search-input {
-    min-width: 280px;
-    padding: var(--space-sm) var(--space-md);
+    min-width: 300px;
+    padding: var(--space-sm) var(--space-lg);
+    font-size: var(--font-size-sm);
+    border-color: var(--border-light);
+  }
+
+  .search-input:focus {
+    box-shadow: 0 0 0 3px var(--accent-light);
   }
 
   .filter-select {
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-sm) var(--space-lg);
+    font-size: var(--font-size-sm);
     cursor: pointer;
+    border-color: var(--border-light);
+    color: var(--text-secondary);
+  }
+
+  .filter-select:hover {
+    border-color: var(--border-color);
   }
 
   .actions {
     display: flex;
-    gap: var(--space-xs);
+    gap: var(--space-sm);
+    align-items: center;
   }
 
   .action-btn {
     padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background: var(--bg-secondary);
-    font-size: 1rem;
-    transition: all 0.15s ease;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
   }
 
   .action-btn:hover {
-    border-color: var(--border-hover);
-    background: var(--bg-tertiary);
-  }
-
-  .action-btn:active {
-    transform: translateY(1px);
+    border-color: var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 </style>
 
