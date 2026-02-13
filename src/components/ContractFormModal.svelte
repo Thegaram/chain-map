@@ -15,7 +15,6 @@
   let type: ContractType = 'implementation';
   let tags = '';
   let source = '';
-  let expectedCodehash = '';
   let notes = '';
   let errors: Record<string, string> = {};
 
@@ -27,7 +26,6 @@
     type = contract.type;
     tags = contract.tags.join(', ');
     source = contract.source || '';
-    expectedCodehash = contract.expectedCodehash || '';
     notes = contract.notes || '';
   } else if (open) {
     // Reset form for new contract
@@ -37,7 +35,6 @@
     type = 'implementation';
     tags = '';
     source = '';
-    expectedCodehash = '';
     notes = '';
   }
 
@@ -45,8 +42,7 @@
     // Validate form
     const validation = validateContractForm({
       label,
-      address,
-      expectedCodehash
+      address
     });
 
     if (!validation.valid) {
@@ -65,7 +61,6 @@
         type,
         tags: tagArray,
         source: source.trim() || undefined,
-        expectedCodehash: expectedCodehash.trim() || undefined,
         notes: notes.trim() || undefined,
       });
     } else {
@@ -77,7 +72,6 @@
         type,
         tags: tagArray,
         source: source.trim() || undefined,
-        expectedCodehash: expectedCodehash.trim() || undefined,
         verificationStatus: 'unverified',
         notes: notes.trim() || undefined,
       });
@@ -177,20 +171,6 @@
           bind:value={source}
           placeholder="https://github.com/..."
         />
-      </div>
-
-      <div class="field-group span-2">
-        <label for="codehash">Expected Codehash</label>
-        <input
-          id="codehash"
-          type="text"
-          bind:value={expectedCodehash}
-          placeholder="0x..."
-          class:error={errors.expectedCodehash}
-        />
-        {#if errors.expectedCodehash}
-          <span class="error-text">{errors.expectedCodehash}</span>
-        {/if}
       </div>
 
       <div class="field-group span-2">

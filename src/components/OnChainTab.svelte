@@ -80,6 +80,14 @@
       return `${chain.explorerUrl}/address/${contract.address}#code`;
     }
   }
+
+  function saveAsExpected() {
+    if (!contract || !onchainData) return;
+
+    inventory.updateContract(contract.id, {
+      expectedCodehash: onchainData.codehash
+    });
+  }
 </script>
 
 <div class="onchain-tab">
@@ -107,14 +115,18 @@
           <span class="info-label">Size</span>
           <span class="info-value">{onchainData.bytecodeSize}</span>
         </div>
-        {#if contract?.expectedCodehash}
-          <div class="info-item">
-            <span class="info-label">Match Expected</span>
+        <div class="info-item">
+          <span class="info-label">Verification</span>
+          {#if contract?.expectedCodehash}
             <span class="info-value" class:match={onchainData.codehashMatch} class:mismatch={!onchainData.codehashMatch}>
-              {onchainData.codehashMatch ? '✓ Matches' : '✗ Mismatch'}
+              {onchainData.codehashMatch ? '✓ Matches expected' : '✗ Does not match expected'}
             </span>
-          </div>
-        {/if}
+          {:else}
+            <button class="btn-inline" on:click={saveAsExpected}>
+              Save as Expected
+            </button>
+          {/if}
+        </div>
       </div>
     </div>
 
@@ -208,30 +220,6 @@
     word-break: break-all;
   }
 
-  .verification-status {
-    display: flex;
-    gap: var(--space-sm);
-  }
-
-  .status-badge {
-    padding: var(--space-xs) var(--space-md);
-    border-radius: 4px;
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-  }
-
-  .status-badge.verified {
-    background: rgba(34, 139, 230, 0.1);
-    color: var(--accent);
-    border: 1px solid rgba(34, 139, 230, 0.3);
-  }
-
-  .status-badge.unverified {
-    background: var(--bg-tertiary);
-    color: var(--text-tertiary);
-    border: 1px solid var(--border-color);
-  }
-
   .link-list {
     display: flex;
     flex-direction: column;
@@ -308,5 +296,21 @@
 
   .mismatch {
     color: #e03131;
+  }
+
+  .btn-inline {
+    padding: var(--space-xs) var(--space-md);
+    border-radius: 4px;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--accent);
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+
+  .btn-inline:hover {
+    background: rgba(34, 139, 230, 0.1);
   }
 </style>

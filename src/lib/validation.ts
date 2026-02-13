@@ -34,7 +34,6 @@ export function isValidHexHash(hash: string): boolean {
 export function validateContractForm(data: {
   label: string;
   address: string;
-  expectedCodehash?: string;
 }): ValidationResult {
   const errors: Record<string, string> = {};
 
@@ -46,10 +45,6 @@ export function validateContractForm(data: {
     errors.address = ERROR_MESSAGES.ADDRESS_REQUIRED;
   } else if (!isValidAddress(data.address)) {
     errors.address = ERROR_MESSAGES.ADDRESS_INVALID;
-  }
-
-  if (data.expectedCodehash && !isValidHexHash(data.expectedCodehash)) {
-    errors.expectedCodehash = ERROR_MESSAGES.CODEHASH_INVALID;
   }
 
   return {
