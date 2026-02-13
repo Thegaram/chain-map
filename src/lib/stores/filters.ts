@@ -67,7 +67,7 @@ export const filteredContracts = derived(
     // Filter by tags
     if ($filters.selectedTags.length > 0) {
       result = result.filter(c =>
-        $filters.selectedTags.some(tag => c.tags.includes(tag))
+        $filters.selectedTags.every(tag => c.tags.includes(tag))
       );
     }
 

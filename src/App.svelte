@@ -5,6 +5,7 @@
   import Drawer from './components/Drawer.svelte';
   import { inventory } from './lib/stores/inventory';
   import { isDirty, restoreLastFile } from './lib/stores/persistence';
+  import { drawerOpen } from './lib/stores/selectedContract';
   import { handleKeydown } from './lib/keyboardShortcuts';
   import { onMount } from 'svelte';
 
@@ -56,8 +57,10 @@
 <svelte:window on:keydown={handleKeydown} on:beforeunload={handleBeforeUnload} />
 
 <div class="app-container">
-  <TopBar />
-  <TagFilter />
+  <div class="top-section" class:dimmed={$drawerOpen}>
+    <TopBar />
+    <TagFilter />
+  </div>
 
   <div class="main-content">
     <ContractTable />
@@ -71,6 +74,17 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+  }
+
+  .top-section {
+    position: relative;
+    transition: filter 0.2s ease;
+  }
+
+  .top-section.dimmed {
+    background: rgba(0, 0, 0, 0.2);
+    filter: blur(2px);
+    pointer-events: none;
   }
 
   .main-content {

@@ -2,7 +2,7 @@
   import { sortedContracts, sort } from '../lib/stores/sort';
   import type { SortField } from '../lib/stores/sort';
   import { chainMap } from '../lib/stores/chains';
-  import { openDrawer } from '../lib/stores/selectedContract';
+  import { openDrawer, selectedContractId } from '../lib/stores/selectedContract';
   import { formatGitHubSource, getGitHubUrl, getExplorerAddressUrl } from '../lib/links';
 
   function shortenAddress(address: string): string {
@@ -30,7 +30,7 @@
           Chain {getSortIcon('chain')}
         </th>
         <th>Address</th>
-        <th class="sortable" on:click={() => handleSort('type')}>
+        <th class="sortable type-header" on:click={() => handleSort('type')}>
           Proxy {getSortIcon('type')}
         </th>
         <th>Source</th>
@@ -42,7 +42,11 @@
         {@const chain = $chainMap.get(contract.chainId)}
         {@const explorerUrl = getExplorerAddressUrl(contract.address, chain)}
         {@const githubUrl = contract.source ? getGitHubUrl(contract.source) : null}
-        <tr class="contract-row" on:click={() => openDrawer(contract.id)}>
+        <tr
+          class="contract-row"
+          class:selected={$selectedContractId === contract.id}
+          on:click={() => openDrawer(contract.id)}
+        >
           <td class="label-cell">{contract.label}</td>
           <td>{chain?.shortName || `Chain ${contract.chainId}`}</td>
           <td class="address-cell">
@@ -60,7 +64,15 @@
               {shortenAddress(contract.address)}
             {/if}
           </td>
-          <td class="type-cell">{contract.type === 'proxy' ? '✓' : ''}</td>
+          <td class="type-cell">
+            {#if contract.type === 'proxy'}
+              ✓
+            {:else if contract.type === 'implementation'}
+              —
+            {:else}
+              <!-- Empty for unchecked/unknown -->
+            {/if}
+          </td>
           <td class="source-cell">
             {#if githubUrl}
               <a
@@ -146,6 +158,15 @@
     background: var(--bg-secondary);
   }
 
+  .contract-row.selected {
+    background: var(--bg-secondary);
+    border-left: 2px solid var(--accent);
+  }
+
+  .contract-row.selected:hover {
+    background: var(--bg-tertiary);
+  }
+
   td {
     padding: var(--space-md);
     color: var(--text-primary);
@@ -197,8 +218,13 @@
     color: var(--text-secondary);
   }
 
+  .type-header {
+    text-align: center;
+  }
+
   .type-cell {
-    text-align: left;
+    text-align: center;
+    color: var(--text-secondary);
   }
 
   .empty-state {
