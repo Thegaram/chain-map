@@ -4,8 +4,6 @@
 
 export type ContractType = 'implementation' | 'proxy';
 
-export type VerificationStatus = 'verified' | 'unverified' | 'pending' | 'failed';
-
 export interface ContractRecord {
   id: string;
   label: string;
@@ -15,8 +13,6 @@ export interface ContractRecord {
   tags: string[];
   source?: string;
   abiId?: string;
-  verificationStatus: VerificationStatus;
-  notes?: string;
   // Cached on-chain data
   codehash?: string;
   bytecodeSize?: number;

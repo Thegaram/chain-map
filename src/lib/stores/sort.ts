@@ -2,7 +2,7 @@ import { writable, derived } from 'svelte/store';
 import { filteredContracts } from './filters';
 import type { ContractRecord } from '../types';
 
-export type SortField = 'label' | 'chain' | 'type' | 'status' | 'updatedAt';
+export type SortField = 'label' | 'chain' | 'type' | 'updatedAt';
 export type SortDirection = 'asc' | 'desc';
 
 interface SortState {
@@ -84,10 +84,6 @@ export const sortedContracts = derived(
         case 'type':
           aVal = a.type;
           bVal = b.type;
-          break;
-        case 'status':
-          aVal = a.verificationStatus;
-          bVal = b.verificationStatus;
           break;
         case 'updatedAt':
           aVal = a.updatedAt;

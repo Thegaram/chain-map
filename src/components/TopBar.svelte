@@ -26,12 +26,6 @@
     showAddModal = true;
   }
 
-
-  function handleSettings() {
-    // Settings modal will be implemented later
-    console.log('Settings');
-  }
-
   // Initialize theme on mount
   onMount(() => {
     const stored = localStorage.getItem('theme');
@@ -143,10 +137,6 @@
     </button>
 
     <KeyboardHints />
-
-    <button class="action-btn" on:click={handleSettings} title="Settings">
-      ⚙
-    </button>
 
     <button class="action-btn" on:click={toggleTheme} title="Toggle theme">
       {currentTheme === 'light' ? THEME_ICONS.LIGHT : THEME_ICONS.DARK}

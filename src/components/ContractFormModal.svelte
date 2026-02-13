@@ -12,10 +12,8 @@
   let label = '';
   let address = '';
   let chainId = 1;
-  let type: ContractType = 'implementation';
   let tags = '';
   let source = '';
-  let notes = '';
   let errors: Record<string, string> = {};
 
   // Initialize form when contract changes
@@ -23,19 +21,15 @@
     label = contract.label;
     address = contract.address;
     chainId = contract.chainId;
-    type = contract.type;
     tags = contract.tags.join(', ');
     source = contract.source || '';
-    notes = contract.notes || '';
   } else if (open) {
     // Reset form for new contract
     label = '';
     address = '';
     chainId = 1;
-    type = 'implementation';
     tags = '';
     source = '';
-    notes = '';
   }
 
   function handleSubmit() {
@@ -58,22 +52,18 @@
       inventory.updateContract(contract.id, {
         label: label.trim(),
         chainId,
-        type,
         tags: tagArray,
         source: source.trim() || undefined,
-        notes: notes.trim() || undefined,
       });
     } else {
-      // Add new contract
+      // Add new contract (type will be auto-detected from proxy detection)
       inventory.addContract({
         label: label.trim(),
         address: address.trim(),
         chainId,
-        type,
+        type: 'implementation', // Default, will be updated by proxy detection
         tags: tagArray,
         source: source.trim() || undefined,
-        verificationStatus: 'unverified',
-        notes: notes.trim() || undefined,
       });
     }
 
@@ -140,16 +130,6 @@
         </select>
       </div>
 
-      <div class="field-group">
-        <label for="type">
-          Type <span class="required">*</span>
-        </label>
-        <select id="type" bind:value={type}>
-          <option value="implementation">Implementation</option>
-          <option value="proxy">Proxy</option>
-        </select>
-      </div>
-
       <div class="field-group span-2">
         <label for="tags">
           Tags
@@ -174,16 +154,6 @@
           bind:value={source}
           placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL"
         />
-      </div>
-
-      <div class="field-group span-2">
-        <label for="notes">Notes</label>
-        <textarea
-          id="notes"
-          rows="4"
-          bind:value={notes}
-          placeholder="Additional notes about this contract..."
-        ></textarea>
       </div>
     </div>
 

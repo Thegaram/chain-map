@@ -13,7 +13,7 @@ export const drawerOpen = writable<boolean>(false);
 /**
  * Store for active drawer tab
  */
-export const activeTab = writable<'details' | 'onchain' | 'abi'>('details');
+export const activeTab = writable<'details' | 'abi'>('details');
 
 /**
  * Helper to open drawer with a contract

@@ -3,21 +3,10 @@
   import type { SortField } from '../lib/stores/sort';
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer } from '../lib/stores/selectedContract';
-  import { STATUS_ICONS } from '../lib/constants';
   import { formatGitHubSource, getGitHubUrl, getExplorerAddressUrl } from '../lib/links';
 
   function shortenAddress(address: string): string {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  }
-
-  function getStatusIcon(status: string): string {
-    switch (status) {
-      case 'verified': return STATUS_ICONS.VERIFIED;
-      case 'unverified': return STATUS_ICONS.UNVERIFIED;
-      case 'pending': return STATUS_ICONS.PENDING;
-      case 'failed': return STATUS_ICONS.FAILED;
-      default: return STATUS_ICONS.UNVERIFIED;
-    }
   }
 
   function handleSort(field: SortField) {
@@ -42,13 +31,10 @@
         </th>
         <th>Address</th>
         <th class="sortable" on:click={() => handleSort('type')}>
-          Type {getSortIcon('type')}
+          Proxy {getSortIcon('type')}
         </th>
         <th>Source</th>
         <th>Tags</th>
-        <th class="sortable" on:click={() => handleSort('status')}>
-          Status {getSortIcon('status')}
-        </th>
       </tr>
     </thead>
     <tbody>
@@ -74,7 +60,7 @@
               {shortenAddress(contract.address)}
             {/if}
           </td>
-          <td class="type-cell">{contract.type}</td>
+          <td class="type-cell">{contract.type === 'proxy' ? '✓' : ''}</td>
           <td class="source-cell">
             {#if githubUrl}
               <a
@@ -97,7 +83,6 @@
               {/each}
             </div>
           </td>
-          <td class="status-cell">{getStatusIcon(contract.verificationStatus)}</td>
         </tr>
       {/each}
     </tbody>
@@ -212,9 +197,8 @@
     color: var(--text-secondary);
   }
 
-  .status-cell {
-    text-align: center;
-    font-size: 1rem;
+  .type-cell {
+    text-align: left;
   }
 
   .empty-state {

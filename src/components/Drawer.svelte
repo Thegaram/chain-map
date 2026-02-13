@@ -1,10 +1,11 @@
 <script lang="ts">
   import DetailsTab from './DetailsTab.svelte';
-  import OnChainTab from './OnChainTab.svelte';
   import AbiTab from './AbiTab.svelte';
   import { drawerOpen, selectedContractId, activeTab, closeDrawer } from '../lib/stores/selectedContract';
+  import { inventory } from '../lib/stores/inventory';
+  import { UI_MESSAGES } from '../lib/constants';
 
-  function handleTabChange(tab: 'details' | 'onchain' | 'abi') {
+  function handleTabChange(tab: 'details' | 'abi') {
     activeTab.set(tab);
   }
 
@@ -16,6 +17,18 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
+      closeDrawer();
+    }
+  }
+
+  function handleDelete() {
+    if (!$selectedContractId) return;
+
+    const contract = $inventory.find(c => c.id === $selectedContractId);
+    if (!contract) return;
+
+    if (confirm(UI_MESSAGES.DELETE_CONFIRM(contract.label))) {
+      inventory.deleteContract($selectedContractId);
       closeDrawer();
     }
   }
@@ -37,13 +50,6 @@
           </button>
           <button
             class="tab"
-            class:active={$activeTab === 'onchain'}
-            on:click={() => handleTabChange('onchain')}
-          >
-            On-chain
-          </button>
-          <button
-            class="tab"
             class:active={$activeTab === 'abi'}
             on:click={() => handleTabChange('abi')}
           >
@@ -51,16 +57,21 @@
           </button>
         </div>
 
-        <button class="close-btn" on:click={closeDrawer} title="Close (Esc)">
-          ✕
-        </button>
+        <div class="header-actions">
+          <button class="icon-btn delete-btn" on:click={handleDelete} title="Delete contract">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 4h12M5.5 4V2.5h5V4M6.5 7v5M9.5 7v5M3.5 4l.5 9.5h8l.5-9.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="icon-btn close-btn" on:click={closeDrawer} title="Close (Esc)">
+            ✕
+          </button>
+        </div>
       </div>
 
       <div class="drawer-content">
         {#if $activeTab === 'details'}
           <DetailsTab />
-        {:else if $activeTab === 'onchain'}
-          <OnChainTab />
         {:else if $activeTab === 'abi'}
           <AbiTab />
         {/if}
@@ -124,17 +135,31 @@
     font-weight: 500;
   }
 
-  .close-btn {
+  .header-actions {
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  .icon-btn {
     padding: var(--space-sm);
     border-radius: 4px;
     color: var(--text-secondary);
     font-size: 1.25rem;
     line-height: 1;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .close-btn:hover {
+  .icon-btn:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
+  }
+
+  .delete-btn:hover {
+    background: rgba(224, 49, 49, 0.1);
+    color: #e03131;
   }
 
   .drawer-content {

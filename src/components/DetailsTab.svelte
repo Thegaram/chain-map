@@ -1,19 +1,39 @@
 <script lang="ts">
   import { inventory } from '../lib/stores/inventory';
-  import { selectedContractId, closeDrawer } from '../lib/stores/selectedContract';
-  import { chains } from '../lib/stores/chains';
+  import { selectedContractId, closeDrawer, openDrawer } from '../lib/stores/selectedContract';
+  import { chains, chainMap } from '../lib/stores/chains';
   import { parseTags } from '../lib/validation';
   import { UI_MESSAGES } from '../lib/constants';
-  import type { ContractType } from '../lib/types';
+  import { getBytecodeInfo, formatBytecodeSize } from '../lib/chain/bytecode';
+  import { detectProxy, formatProxyType } from '../lib/chain/proxy';
+  import { getExplorerAddressUrl } from '../lib/links';
+  import type { ContractType, ContractRecord } from '../lib/types';
+  import type { Address } from 'viem';
 
-  $: contract = $selectedContractId ? inventory.getContract($selectedContractId) : null;
+  // Make contract reactive to inventory changes
+  let contract: ContractRecord | null = null;
+  $: if ($selectedContractId) {
+    contract = $inventory.find(c => c.id === $selectedContractId) || null;
+  } else {
+    contract = null;
+  }
+  $: chain = contract ? $chainMap.get(contract.chainId) : null;
+
+  // Check if implementation address exists in inventory
+  $: implementationContract = contract?.implementation
+    ? $inventory.find(c => c.address.toLowerCase() === contract.implementation?.toLowerCase())
+    : null;
 
   let editedLabel = '';
   let editedChainId = 1;
   let editedType: ContractType = 'implementation';
   let editedTags = '';
   let editedSource = '';
-  let editedNotes = '';
+
+  let loadingBytecode = false;
+  let loadingProxy = false;
+  let error: string | null = null;
+  let savedField: string | null = null;
 
   $: if (contract) {
     editedLabel = contract.label;
@@ -21,30 +41,110 @@
     editedType = contract.type;
     editedTags = contract.tags.join(', ');
     editedSource = contract.source || '';
-    editedNotes = contract.notes || '';
   }
 
-  function handleSave() {
-    if (!contract) return;
-
-    inventory.updateContract(contract.id, {
-      label: editedLabel,
-      chainId: editedChainId,
-      type: editedType,
-      tags: parseTags(editedTags),
-      source: editedSource.trim() || undefined,
-      notes: editedNotes || undefined,
-    });
-
-    alert(UI_MESSAGES.SAVE_SUCCESS);
+  function showSavedIndicator(field: string) {
+    savedField = field;
+    setTimeout(() => {
+      savedField = null;
+    }, 2000);
   }
 
-  function handleDelete() {
+  function saveField(field: string, updates: Partial<Omit<ContractRecord, 'id' | 'createdAt'>>) {
+    if (!contract) return;
+    inventory.updateContract(contract.id, updates);
+    showSavedIndicator(field);
+  }
+
+  function handleLabelBlur() {
+    if (!contract || editedLabel === contract.label) return;
+    saveField('label', { label: editedLabel });
+  }
+
+  function handleChainChange() {
+    if (!contract || editedChainId === contract.chainId) return;
+    saveField('chain', { chainId: editedChainId });
+  }
+
+  function handleTypeChange() {
+    if (!contract || editedType === contract.type) return;
+    saveField('type', { type: editedType });
+  }
+
+  function handleTagsBlur() {
+    if (!contract) return;
+    const newTags = parseTags(editedTags);
+    const oldTags = contract.tags.join(', ');
+    if (editedTags === oldTags) return;
+    saveField('tags', { tags: newTags });
+  }
+
+  function handleSourceBlur() {
+    if (!contract) return;
+    const newSource = editedSource.trim() || undefined;
+    if (newSource === contract.source) return;
+    saveField('source', { source: newSource });
+  }
+
+  function handleImplementationClick() {
+    if (implementationContract) {
+      openDrawer(implementationContract.id);
+    }
+  }
+
+  async function fetchBytecode() {
     if (!contract) return;
 
-    if (confirm(UI_MESSAGES.DELETE_CONFIRM(contract.label))) {
-      inventory.deleteContract(contract.id);
-      closeDrawer();
+    loadingBytecode = true;
+    error = null;
+
+    try {
+      const bytecodeInfo = await getBytecodeInfo(
+        contract.address as Address,
+        contract.chainId
+      );
+
+      if (bytecodeInfo.isEmpty) {
+        error = 'No bytecode found at this address';
+        return;
+      }
+
+      // Save to contract record
+      inventory.updateContract(contract.id, {
+        codehash: bytecodeInfo.codehash,
+        bytecodeSize: bytecodeInfo.size
+      });
+    } catch (err: any) {
+      error = err.message || 'Failed to fetch bytecode';
+    } finally {
+      loadingBytecode = false;
+    }
+  }
+
+  async function fetchProxy() {
+    if (!contract) return;
+
+    loadingProxy = true;
+
+    try {
+      const proxyInfo = await detectProxy(
+        contract.address as Address,
+        contract.chainId
+      );
+
+      // Auto-detect type based on proxy detection
+      const detectedType: ContractType = proxyInfo.isProxy ? 'proxy' : 'implementation';
+
+      // Save to contract record
+      inventory.updateContract(contract.id, {
+        type: detectedType,
+        proxyType: proxyInfo.type,
+        implementation: proxyInfo.implementation || undefined
+      });
+    } catch (err: any) {
+      console.error('Failed to fetch proxy info:', err);
+    } finally {
+      loadingProxy = false;
     }
   }
 </script>
@@ -52,8 +152,13 @@
 {#if contract}
   <div class="details-tab">
     <div class="field-group">
-      <label for="label">Label</label>
-      <input id="label" type="text" bind:value={editedLabel} />
+      <div class="label-with-indicator">
+        <label for="label">Label</label>
+        {#if savedField === 'label'}
+          <span class="saved-indicator">✓</span>
+        {/if}
+      </div>
+      <input id="label" type="text" bind:value={editedLabel} on:blur={handleLabelBlur} />
     </div>
 
     <div class="field-group">
@@ -61,44 +166,140 @@
       <input id="address" type="text" value={contract.address} readonly />
     </div>
 
-    <div class="field-row">
-      <div class="field-group">
+    <div class="field-group">
+      <div class="label-with-indicator">
         <label for="chain">Chain</label>
-        <select id="chain" bind:value={editedChainId}>
-          {#each $chains as chain}
-            <option value={chain.chainId}>{chain.name}</option>
-          {/each}
-        </select>
+        {#if savedField === 'chain'}
+          <span class="saved-indicator">✓</span>
+        {/if}
       </div>
+      <select id="chain" bind:value={editedChainId} on:change={handleChainChange}>
+        {#each $chains as chain}
+          <option value={chain.chainId}>{chain.name}</option>
+        {/each}
+      </select>
+    </div>
 
-      <div class="field-group">
-        <label for="type">Type</label>
-        <select id="type" bind:value={editedType}>
-          <option value="implementation">Implementation</option>
-          <option value="proxy">Proxy</option>
-        </select>
+    <div class="field-group">
+      <div class="label-with-indicator">
+        <label for="tags">Tags (comma separated)</label>
+        {#if savedField === 'tags'}
+          <span class="saved-indicator">✓</span>
+        {/if}
+      </div>
+      <input id="tags" type="text" bind:value={editedTags} on:blur={handleTagsBlur} />
+    </div>
+
+    <div class="field-group">
+      <div class="label-with-indicator">
+        <label for="source">Source Repository (paste GitHub URL or use owner/repo@ref)</label>
+        {#if savedField === 'source'}
+          <span class="saved-indicator">✓</span>
+        {/if}
+      </div>
+      <input id="source" type="text" bind:value={editedSource} on:blur={handleSourceBlur} placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL" />
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- On-Chain Data Section -->
+    {#if error}
+      <div class="error-banner">
+        <span class="error-message">⚠ {error}</span>
+      </div>
+    {/if}
+
+    <div class="section">
+      <h3>Runtime Bytecode</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-header">
+            <span class="info-label">Codehash</span>
+            <button
+              class="refresh-btn"
+              on:click={fetchBytecode}
+              disabled={loadingBytecode}
+              title="Refresh bytecode data"
+            >
+              {#if loadingBytecode}
+                <span class="spinner-small"></span>
+              {:else}
+                ↻
+              {/if}
+            </button>
+          </div>
+          {#if contract.codehash}
+            <code class="info-value">{contract.codehash}</code>
+          {:else}
+            <span class="info-value empty">—</span>
+          {/if}
+        </div>
+        <div class="info-item">
+          <div class="info-header">
+            <span class="info-label">Size</span>
+          </div>
+          {#if contract.bytecodeSize !== undefined}
+            <span class="info-value">{formatBytecodeSize(contract.bytecodeSize)}</span>
+          {:else}
+            <span class="info-value empty">—</span>
+          {/if}
+        </div>
       </div>
     </div>
 
-    <div class="field-group">
-      <label for="tags">Tags (comma separated)</label>
-      <input id="tags" type="text" bind:value={editedTags} />
+    <div class="section">
+      <h3>Proxy Detection</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-header">
+            <span class="info-label">Type</span>
+            <button
+              class="refresh-btn"
+              on:click={fetchProxy}
+              disabled={loadingProxy}
+              title="Refresh proxy data"
+            >
+              {#if loadingProxy}
+                <span class="spinner-small"></span>
+              {:else}
+                ↻
+              {/if}
+            </button>
+          </div>
+          {#if contract.proxyType}
+            <span class="info-value">{formatProxyType(contract.proxyType)}</span>
+          {:else}
+            <span class="info-value empty">—</span>
+          {/if}
+        </div>
+        {#if contract.implementation}
+          <div class="info-item">
+            <div class="info-header">
+              <span class="info-label">Implementation</span>
+            </div>
+            {#if implementationContract}
+              <div>
+                <button class="implementation-link" on:click={handleImplementationClick} title="Open {implementationContract.label}">
+                  {contract.implementation} → {implementationContract.label}
+                </button>
+              </div>
+            {:else}
+              <code class="info-value">{contract.implementation}</code>
+            {/if}
+          </div>
+        {/if}
+      </div>
     </div>
 
-    <div class="field-group">
-      <label for="source">Source Repository (paste GitHub URL or use owner/repo@ref)</label>
-      <input id="source" type="text" bind:value={editedSource} placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL" />
-    </div>
-
-    <div class="field-group">
-      <label for="notes">Notes</label>
-      <textarea id="notes" rows="6" bind:value={editedNotes}></textarea>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-primary" on:click={handleSave}>Save Changes</button>
-      <button class="btn btn-secondary" on:click={handleDelete}>Delete Contract</button>
-    </div>
+    {#if chain?.explorerUrl}
+      {@const explorerUrl = getExplorerAddressUrl(contract.address, chain)}
+      <div class="section">
+        <h3>Explorer</h3>
+        <a href={explorerUrl} target="_blank" rel="noopener" class="explorer-link">
+          View on {chain?.shortName} Explorer →
+        </a>
+      </div>
+    {/if}
   </div>
 {:else}
   <div class="empty-state">
@@ -131,49 +332,171 @@
     color: var(--text-secondary);
   }
 
+  .label-with-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .saved-indicator {
+    color: #2f9e44;
+    font-size: var(--font-size-sm);
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
   input[readonly] {
     opacity: 0.6;
     cursor: default;
   }
 
-  textarea {
-    resize: vertical;
-    font-family: var(--font-mono);
-    line-height: 1.5;
+  .divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: var(--space-md) 0;
   }
 
-  .actions {
+  .section {
     display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  h3 {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .info-header {
+    display: flex;
+    align-items: center;
     gap: var(--space-sm);
-    padding-top: var(--space-md);
   }
 
-  .btn {
-    padding: var(--space-sm) var(--space-lg);
-    border-radius: 4px;
-    font-weight: 500;
-    transition: all 0.15s ease;
+  .info-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-tertiary);
   }
 
-  .btn-primary {
-    background: var(--accent);
-    color: white;
-    border: 1px solid var(--accent);
-  }
-
-  .btn-primary:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-  }
-
-  .btn-secondary {
-    background: transparent;
+  .info-value {
+    font-size: var(--font-size-base);
     color: var(--text-primary);
-    border: 1px solid var(--border-color);
   }
 
-  .btn-secondary:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
+  .info-value.empty {
+    color: var(--text-tertiary);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    word-break: break-all;
+  }
+
+  .refresh-btn {
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .refresh-btn:hover:not(:disabled) {
+    color: var(--accent);
+  }
+
+  .refresh-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .spinner-small {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .explorer-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    transition: color 0.15s ease;
+  }
+
+  .explorer-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  .implementation-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.15s ease;
+    text-align: left;
+  }
+
+  .implementation-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  .error-banner {
+    padding: var(--space-md);
+    background: rgba(224, 49, 49, 0.1);
+    border: 1px solid rgba(224, 49, 49, 0.3);
+    border-radius: 4px;
+  }
+
+  .error-message {
+    color: #e03131;
+    font-size: var(--font-size-sm);
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2xl);
+    text-align: center;
+    color: var(--text-tertiary);
   }
 </style>

@@ -30,9 +30,6 @@
         type: 'implementation',
         tags: ['token', 'stablecoin', 'production'],
         source: 'https://github.com/centre-tokens/centre-tokens',
-        expectedCodehash: '0x1234567890abcdef...',
-        verificationStatus: 'verified',
-        notes: 'USDC stablecoin implementation on Ethereum mainnet'
       });
 
       inventory.addContract({
@@ -42,8 +39,6 @@
         type: 'proxy',
         tags: ['bridge', 'infrastructure'],
         source: 'https://github.com/scroll-tech/scroll-contracts',
-        verificationStatus: 'verified',
-        notes: 'Main bridge proxy contract on Scroll'
       });
 
       inventory.addContract({
@@ -53,8 +48,6 @@
         type: 'implementation',
         tags: ['defi', 'router', 'production'],
         source: 'https://github.com/Uniswap/v3-periphery',
-        verificationStatus: 'verified',
-        notes: 'Uniswap V3 SwapRouter contract'
       });
     }
   });
