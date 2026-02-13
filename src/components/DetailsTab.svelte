@@ -9,6 +9,7 @@
   import { getExplorerAddressUrl } from '../lib/links';
   import type { ContractType, ContractRecord } from '../lib/types';
   import type { Address } from 'viem';
+  import { onMount, tick } from 'svelte';
 
   // Make contract reactive to inventory changes
   let contract: ContractRecord | null = null;
@@ -34,6 +35,7 @@
   let loadingProxy = false;
   let error: string | null = null;
   let savedField: string | null = null;
+  let labelInput: HTMLInputElement;
 
   $: if (contract) {
     editedLabel = contract.label;
@@ -41,6 +43,12 @@
     editedType = contract.type;
     editedTags = contract.tags.join(', ');
     editedSource = contract.source || '';
+
+    // Auto-focus first input when contract changes
+    tick().then(() => {
+      labelInput?.focus();
+      labelInput?.select();
+    });
   }
 
   function showSavedIndicator(field: string) {
@@ -158,7 +166,7 @@
           <span class="saved-indicator">✓</span>
         {/if}
       </div>
-      <input id="label" type="text" bind:value={editedLabel} on:blur={handleLabelBlur} />
+      <input id="label" type="text" bind:value={editedLabel} on:blur={handleLabelBlur} bind:this={labelInput} />
     </div>
 
     <div class="field-group">
@@ -352,6 +360,23 @@
   input[readonly] {
     opacity: 0.6;
     cursor: default;
+  }
+
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   .divider {

@@ -2,6 +2,10 @@
  * Keyboard shortcuts manager
  */
 
+import { keyboardFocusIndex, focusedContractId } from './stores/keyboardFocus';
+import { openDrawer, drawerOpen } from './stores/selectedContract';
+import { get } from 'svelte/store';
+
 export interface ShortcutHandler {
   key: string;
   ctrl?: boolean;
@@ -27,11 +31,36 @@ export function unregisterShortcut(shortcut: ShortcutHandler) {
 export function handleKeydown(event: KeyboardEvent) {
   // Don't trigger shortcuts when typing in inputs
   const target = event.target as HTMLElement;
-  if (
+  const isInInput =
     target.tagName === 'INPUT' ||
     target.tagName === 'TEXTAREA' ||
-    target.isContentEditable
-  ) {
+    target.isContentEditable;
+
+  // Handle arrow key navigation (unless in input)
+  if (!isInInput && !get(drawerOpen)) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      keyboardFocusIndex.initializeFocus();
+      keyboardFocusIndex.focusNext();
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      keyboardFocusIndex.initializeFocus();
+      keyboardFocusIndex.focusPrevious();
+      return;
+    }
+    if (event.key === 'Enter') {
+      const focusedId = get(focusedContractId);
+      if (focusedId) {
+        event.preventDefault();
+        openDrawer(focusedId);
+        return;
+      }
+    }
+  }
+
+  if (isInInput) {
     // Exception: Cmd/Ctrl+K should work even in inputs
     if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
       // Allow it

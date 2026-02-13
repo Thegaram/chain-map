@@ -2,6 +2,9 @@
   import { allTags } from '../lib/stores/inventory';
   import { filters } from '../lib/stores/filters';
 
+  let tagButtons: { [key: string]: HTMLButtonElement } = {};
+  let focusedTagIndex = -1;
+
   function toggleTag(tag: string) {
     filters.toggleTag(tag);
   }
@@ -12,6 +15,24 @@
 
   function clearTags() {
     $filters.selectedTags.forEach(tag => filters.toggleTag(tag));
+  }
+
+  function handleTagKeydown(event: KeyboardEvent, index: number) {
+    const tags = $allTags;
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      const nextIndex = (index + 1) % tags.length;
+      const nextTag = tags[nextIndex];
+      tagButtons[nextTag]?.focus();
+      focusedTagIndex = nextIndex;
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      const prevIndex = (index - 1 + tags.length) % tags.length;
+      const prevTag = tags[prevIndex];
+      tagButtons[prevTag]?.focus();
+      focusedTagIndex = prevIndex;
+    }
   }
 </script>
 
@@ -26,12 +47,17 @@
       {/if}
     </div>
 
-    <div class="tag-chips">
-      {#each $allTags as tag}
+    <div class="tag-chips" role="group" aria-label="Filter by tags">
+      {#each $allTags as tag, index}
         <button
           class="tag-chip"
           class:selected={isSelected(tag)}
           on:click={() => toggleTag(tag)}
+          on:keydown={(e) => handleTagKeydown(e, index)}
+          bind:this={tagButtons[tag]}
+          role="checkbox"
+          aria-checked={isSelected(tag)}
+          tabindex={index === 0 || focusedTagIndex === index ? 0 : -1}
         >
           {tag}
         </button>
@@ -107,5 +133,15 @@
   .tag-chip.selected:hover {
     background: var(--accent-hover);
     border-color: var(--accent-hover);
+  }
+
+  .tag-chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .clear-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 </style>

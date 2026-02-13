@@ -3,7 +3,21 @@
   import type { SortField } from '../lib/stores/sort';
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer, selectedContractId } from '../lib/stores/selectedContract';
+  import { focusedContractId } from '../lib/stores/keyboardFocus';
   import { formatGitHubSource, getGitHubUrl, getExplorerAddressUrl } from '../lib/links';
+  import { onMount, tick } from 'svelte';
+
+  let rowElements: { [key: string]: HTMLTableRowElement } = {};
+
+  // Auto-scroll focused row into view
+  $: if ($focusedContractId) {
+    tick().then(() => {
+      const rowElement = rowElements[$focusedContractId];
+      if (rowElement) {
+        rowElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    });
+  }
 
   function shortenAddress(address: string): string {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -45,7 +59,9 @@
         <tr
           class="contract-row"
           class:selected={$selectedContractId === contract.id}
+          class:focused={$focusedContractId === contract.id}
           on:click={() => openDrawer(contract.id)}
+          bind:this={rowElements[contract.id]}
         >
           <td class="label-cell">{contract.label}</td>
           <td>{chain?.shortName || `Chain ${contract.chainId}`}</td>
@@ -165,6 +181,17 @@
 
   .contract-row.selected:hover {
     background: var(--bg-tertiary);
+  }
+
+  .contract-row.focused {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  .contract-row.focused.selected {
+    /* When both focused and selected, show both indicators */
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
 
   td {

@@ -18,6 +18,19 @@
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       closeDrawer();
+      return;
+    }
+
+    // Arrow key navigation between tabs
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      activeTab.set('details');
+      return;
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      activeTab.set('abi');
+      return;
     }
   }
 
@@ -40,11 +53,14 @@
   <div class="drawer-backdrop" on:click={handleBackdropClick} role="button" tabindex="-1">
     <aside class="drawer">
       <div class="drawer-header">
-        <div class="tabs">
+        <div class="tabs" role="tablist">
           <button
             class="tab"
             class:active={$activeTab === 'details'}
             on:click={() => handleTabChange('details')}
+            role="tab"
+            aria-selected={$activeTab === 'details'}
+            tabindex={$activeTab === 'details' ? 0 : -1}
           >
             Details
           </button>
@@ -52,6 +68,9 @@
             class="tab"
             class:active={$activeTab === 'abi'}
             on:click={() => handleTabChange('abi')}
+            role="tab"
+            aria-selected={$activeTab === 'abi'}
+            tabindex={$activeTab === 'abi' ? 0 : -1}
           >
             ABI
           </button>
@@ -133,6 +152,11 @@
     background: var(--bg-primary);
     color: var(--text-primary);
     font-weight: 500;
+  }
+
+  .tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .header-actions {

@@ -208,6 +208,16 @@
     background: var(--bg-secondary);
     color: var(--text-primary);
   }
+
+  .filter-select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .action-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 </style>
 
 <ContractFormModal

@@ -196,4 +196,9 @@
     background: var(--bg-tertiary);
     border-color: var(--border-hover);
   }
+
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 </style>
