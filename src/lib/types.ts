@@ -17,6 +17,11 @@ export interface ContractRecord {
   abiId?: string;
   verificationStatus: VerificationStatus;
   notes?: string;
+  // Cached on-chain data
+  codehash?: string;
+  bytecodeSize?: number;
+  proxyType?: 'eip1967' | 'eip1167' | 'none';
+  implementation?: string;
   createdAt: number;
   updatedAt: number;
 }

@@ -4,30 +4,24 @@
   import { chainMap } from '../lib/stores/chains';
   import { getBytecodeInfo, formatBytecodeSize } from '../lib/chain/bytecode';
   import { detectProxy, formatProxyType } from '../lib/chain/proxy';
-  import { getExplorerAddressUrl, getExplorerBytecodeUrl } from '../lib/links';
+  import { getExplorerAddressUrl } from '../lib/links';
   import type { Address } from 'viem';
 
-  $: contract = $selectedContractId ? inventory.getContract($selectedContractId) : null;
+  // Make contract reactive to inventory changes
+  $: contract = $selectedContractId ? $inventory.find(c => c.id === $selectedContractId) || null : null;
   $: chain = contract ? $chainMap.get(contract.chainId) : null;
 
-  let loading = false;
+  let loadingBytecode = false;
+  let loadingProxy = false;
   let error: string | null = null;
-  let onchainData: {
-    codehash: string;
-    bytecodeSize: string;
-    isProxy: boolean;
-    proxyType: string;
-    implementation: string | null;
-  } | null = null;
 
-  async function fetchOnChainData() {
-    if (!contract || !chain) return;
+  async function fetchBytecode() {
+    if (!contract) return;
 
-    loading = true;
+    loadingBytecode = true;
     error = null;
 
     try {
-      // Fetch bytecode info
       const bytecodeInfo = await getBytecodeInfo(
         contract.address as Address,
         contract.chainId
@@ -35,62 +29,88 @@
 
       if (bytecodeInfo.isEmpty) {
         error = 'No bytecode found at this address';
-        onchainData = null;
         return;
       }
 
-      // Detect proxy
+      // Save to contract record
+      inventory.updateContract(contract.id, {
+        codehash: bytecodeInfo.codehash,
+        bytecodeSize: bytecodeInfo.size
+      });
+    } catch (err: any) {
+      error = err.message || 'Failed to fetch bytecode';
+    } finally {
+      loadingBytecode = false;
+    }
+  }
+
+  async function fetchProxy() {
+    if (!contract) return;
+
+    loadingProxy = true;
+
+    try {
       const proxyInfo = await detectProxy(
         contract.address as Address,
         contract.chainId
       );
 
-      onchainData = {
-        codehash: bytecodeInfo.codehash,
-        bytecodeSize: formatBytecodeSize(bytecodeInfo.size),
-        isProxy: proxyInfo.isProxy,
-        proxyType: formatProxyType(proxyInfo.type),
-        implementation: proxyInfo.implementation || null
-      };
+      // Save to contract record
+      inventory.updateContract(contract.id, {
+        proxyType: proxyInfo.type,
+        implementation: proxyInfo.implementation || undefined
+      });
     } catch (err: any) {
-      error = err.message || 'Failed to fetch on-chain data';
-      onchainData = null;
+      console.error('Failed to fetch proxy info:', err);
     } finally {
-      loading = false;
+      loadingProxy = false;
     }
-  }
-
-  // Auto-fetch when contract changes
-  $: if (contract) {
-    fetchOnChainData();
   }
 
 </script>
 
-<div class="onchain-tab">
-  {#if loading}
-    <div class="loading-state">
-      <div class="spinner"></div>
-      <p>Fetching on-chain data...</p>
-    </div>
-  {:else if error}
-    <div class="error-state">
-      <p class="error-message">⚠ {error}</p>
-      <button class="btn btn-primary" on:click={fetchOnChainData}>
-        Retry
-      </button>
-    </div>
-  {:else if onchainData}
+{#if contract}
+  <div class="onchain-tab">
+    {#if error}
+      <div class="error-banner">
+        <span class="error-message">⚠ {error}</span>
+      </div>
+    {/if}
+
     <div class="section">
       <h3>Runtime Bytecode</h3>
       <div class="info-grid">
         <div class="info-item">
-          <span class="info-label">Codehash</span>
-          <code class="info-value">{onchainData.codehash}</code>
+          <div class="info-header">
+            <span class="info-label">Codehash</span>
+            <button
+              class="refresh-btn"
+              on:click={fetchBytecode}
+              disabled={loadingBytecode}
+              title="Refresh bytecode data"
+            >
+              {#if loadingBytecode}
+                <span class="spinner-small"></span>
+              {:else}
+                ↻
+              {/if}
+            </button>
+          </div>
+          {#if contract.codehash}
+            <code class="info-value">{contract.codehash}</code>
+          {:else}
+            <span class="info-value empty">—</span>
+          {/if}
         </div>
         <div class="info-item">
-          <span class="info-label">Size</span>
-          <span class="info-value">{onchainData.bytecodeSize}</span>
+          <div class="info-header">
+            <span class="info-label">Size</span>
+          </div>
+          {#if contract.bytecodeSize !== undefined}
+            <span class="info-value">{formatBytecodeSize(contract.bytecodeSize)}</span>
+          {:else}
+            <span class="info-value empty">—</span>
+          {/if}
         </div>
       </div>
     </div>
@@ -99,45 +119,53 @@
       <h3>Proxy Detection</h3>
       <div class="info-grid">
         <div class="info-item">
-          <span class="info-label">Type</span>
-          <span class="info-value">{onchainData.proxyType}</span>
+          <div class="info-header">
+            <span class="info-label">Type</span>
+            <button
+              class="refresh-btn"
+              on:click={fetchProxy}
+              disabled={loadingProxy}
+              title="Refresh proxy data"
+            >
+              {#if loadingProxy}
+                <span class="spinner-small"></span>
+              {:else}
+                ↻
+              {/if}
+            </button>
+          </div>
+          {#if contract.proxyType}
+            <span class="info-value">{formatProxyType(contract.proxyType)}</span>
+          {:else}
+            <span class="info-value empty">—</span>
+          {/if}
         </div>
-        {#if onchainData.implementation}
+        {#if contract.implementation}
           <div class="info-item">
-            <span class="info-label">Implementation</span>
-            <code class="info-value">{onchainData.implementation}</code>
+            <div class="info-header">
+              <span class="info-label">Implementation</span>
+            </div>
+            <code class="info-value">{contract.implementation}</code>
           </div>
         {/if}
       </div>
     </div>
 
-    {@const addressUrl = getExplorerAddressUrl(contract.address, chain)}
-    {@const bytecodeUrl = getExplorerBytecodeUrl(contract.address, chain)}
-    {#if addressUrl}
+    {#if chain?.explorerUrl}
+      {@const explorerUrl = getExplorerAddressUrl(contract.address, chain)}
       <div class="section">
-        <h3>Explorer Links</h3>
-        <div class="link-list">
-          <a href={addressUrl} target="_blank" rel="noopener" class="explorer-link">
-            View on {chain?.shortName} Explorer →
-          </a>
-          <a href={bytecodeUrl} target="_blank" rel="noopener" class="explorer-link">
-            View Bytecode →
-          </a>
-        </div>
+        <h3>Explorer</h3>
+        <a href={explorerUrl} target="_blank" rel="noopener" class="explorer-link">
+          View on {chain?.shortName} Explorer →
+        </a>
       </div>
     {/if}
-
-    <div class="actions">
-      <button class="btn btn-primary" on:click={fetchOnChainData}>
-        Refresh RPC Data
-      </button>
-    </div>
-  {:else}
-    <div class="empty-state">
-      <p>Click "Refresh RPC Data" to fetch on-chain information</p>
-    </div>
-  {/if}
-</div>
+  </div>
+{:else}
+  <div class="empty-state">
+    <p>No contract selected</p>
+  </div>
+{/if}
 
 <style>
   .onchain-tab {
@@ -170,6 +198,12 @@
     gap: var(--space-xs);
   }
 
+  .info-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
   .info-label {
     font-size: var(--font-size-sm);
     color: var(--text-tertiary);
@@ -180,6 +214,10 @@
     color: var(--text-primary);
   }
 
+  .info-value.empty {
+    color: var(--text-tertiary);
+  }
+
   code {
     font-family: var(--font-mono);
     font-size: 0.85rem;
@@ -187,10 +225,41 @@
     word-break: break-all;
   }
 
-  .link-list {
+  .refresh-btn {
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: color 0.15s ease;
     display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .refresh-btn:hover:not(:disabled) {
+    color: var(--accent);
+  }
+
+  .refresh-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .spinner-small {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
   .explorer-link {
@@ -205,55 +274,25 @@
     text-decoration: underline;
   }
 
-  .actions {
-    padding-top: var(--space-md);
-  }
-
-  .btn {
-    padding: var(--space-sm) var(--space-lg);
-    border-radius: 4px;
-    font-weight: 500;
-    transition: all 0.15s ease;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: white;
-    border: 1px solid var(--accent);
-  }
-
-  .btn-primary:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-  }
-
-  .loading-state,
-  .error-state,
   .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: var(--space-2xl);
-    gap: var(--space-lg);
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--text-tertiary);
   }
 
-  .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-color);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  .error-banner {
+    padding: var(--space-md);
+    background: rgba(224, 49, 49, 0.1);
+    border: 1px solid rgba(224, 49, 49, 0.3);
+    border-radius: 4px;
   }
 
   .error-message {
     color: #e03131;
+    font-size: var(--font-size-sm);
   }
 </style>
