@@ -8,6 +8,7 @@
   import FileMenu from './FileMenu.svelte';
   import { registerShortcut, unregisterShortcut } from '../lib/keyboardShortcuts';
   import type { ShortcutHandler } from '../lib/keyboardShortcuts';
+  import { SHORTCUTS, THEME_ICONS } from '../lib/constants';
   import { onMount } from 'svelte';
 
   let currentTheme: 'light' | 'dark' = 'light';
@@ -41,18 +42,18 @@
     // Register keyboard shortcuts
     const shortcuts: ShortcutHandler[] = [
       {
-        key: 'k',
+        key: SHORTCUTS.SEARCH,
         ctrl: true,
         handler: () => searchInput?.focus(),
         description: 'Focus search'
       },
       {
-        key: 'n',
+        key: SHORTCUTS.NEW,
         handler: handleAddRecord,
         description: 'Add new contract'
       },
       {
-        key: 's',
+        key: SHORTCUTS.SAVE,
         ctrl: true,
         handler: async () => {
           if ($isDirty) {
@@ -62,7 +63,7 @@
         description: 'Save inventory'
       },
       {
-        key: 's',
+        key: SHORTCUTS.SAVE,
         ctrl: true,
         shift: true,
         handler: async () => {
@@ -71,7 +72,7 @@
         description: 'Save as...'
       },
       {
-        key: 'o',
+        key: SHORTCUTS.OPEN,
         ctrl: true,
         handler: async () => {
           await loadInventory();
@@ -79,7 +80,7 @@
         description: 'Open inventory'
       },
       {
-        key: 'r',
+        key: SHORTCUTS.REFRESH,
         handler: () => console.log('Refresh RPC - Phase 4'),
         description: 'Refresh RPC data'
       }
@@ -148,7 +149,7 @@
     </button>
 
     <button class="action-btn" on:click={toggleTheme} title="Toggle theme">
-      {currentTheme === 'light' ? '◐' : '◑'}
+      {currentTheme === 'light' ? THEME_ICONS.LIGHT : THEME_ICONS.DARK}
     </button>
   </div>
 </header>

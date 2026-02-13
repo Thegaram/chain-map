@@ -3,6 +3,8 @@
  * With fallback to download/upload for unsupported browsers
  */
 
+import { FILE_CONFIG, ERROR_MESSAGES } from '../constants';
+
 export interface FileSystemSupport {
   supported: boolean;
   message?: string;
@@ -41,19 +43,14 @@ export async function saveFile(
       // Use existing handle or get a new one
       const handle = fileHandle || await window.showSaveFilePicker({
         suggestedName: fileName,
-        types: [
-          {
-            description: 'JSON Files',
-            accept: { 'application/json': ['.json'] }
-          }
-        ]
+        types: FILE_CONFIG.FILE_TYPES
       });
 
       // Request write permission immediately if this is a new handle
       if (!fileHandle) {
         const hasPermission = await verifyPermission(handle, true);
         if (!hasPermission) {
-          throw new Error('Write permission denied');
+          throw new Error(ERROR_MESSAGES.WRITE_PERMISSION_DENIED);
         }
       }
 
@@ -87,19 +84,14 @@ export async function loadFile(): Promise<{ content: string; handle?: FileSystem
   if (support.supported) {
     try {
       const [handle] = await window.showOpenFilePicker({
-        types: [
-          {
-            description: 'JSON Files',
-            accept: { 'application/json': ['.json'] }
-          }
-        ],
+        types: FILE_CONFIG.FILE_TYPES,
         multiple: false
       });
 
       // Request read permission immediately
       const hasPermission = await verifyPermission(handle, false);
       if (!hasPermission) {
-        throw new Error('Read permission denied');
+        throw new Error(ERROR_MESSAGES.READ_PERMISSION_DENIED);
       }
 
       const file = await handle.getFile();
@@ -128,7 +120,7 @@ export async function loadFromHandle(handle: FileSystemFileHandle): Promise<stri
     // Request read permission
     const hasPermission = await verifyPermission(handle, false);
     if (!hasPermission) {
-      throw new Error('Read permission denied');
+      throw new Error(ERROR_MESSAGES.READ_PERMISSION_DENIED);
     }
 
     const file = await handle.getFile();

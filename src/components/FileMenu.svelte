@@ -10,6 +10,7 @@
     fileHandle
   } from '../lib/stores/persistence';
   import { checkFileSystemSupport } from '../lib/storage/fileSystem';
+  import { AUTO_SAVE, UI_MESSAGES } from '../lib/constants';
 
   let showMenu = false;
   let isLoading = false;
@@ -153,13 +154,13 @@
         <button class="menu-item checkbox-item" on:click={toggleAutoSave}>
           <span class="menu-item-icon">{$autoSaveEnabled ? '☑' : '☐'}</span>
           <span class="menu-item-label">Auto-save</span>
-          <span class="menu-item-hint">2s delay</span>
+          <span class="menu-item-hint">{AUTO_SAVE.DEBOUNCE_MS / 1000}s delay</span>
         </button>
       {/if}
 
       {#if !fsSupport.supported}
         <div class="menu-notice">
-          Using download/upload fallback
+          {UI_MESSAGES.FALLBACK_MODE}
         </div>
       {/if}
     </div>

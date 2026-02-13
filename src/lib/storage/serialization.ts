@@ -4,6 +4,7 @@
 
 import type { InventoryData, ContractRecord, ChainConfig, AppSettings } from '../types';
 import { EMPTY_INVENTORY } from '../types';
+import { FILE_CONFIG, ERROR_MESSAGES } from '../constants';
 
 /**
  * Serialize inventory data to JSON string
@@ -14,7 +15,7 @@ export function serializeInventory(
   settings: AppSettings
 ): string {
   const data: InventoryData = {
-    schemaVersion: 1,
+    schemaVersion: FILE_CONFIG.SCHEMA_VERSION,
     settings,
     chains,
     contracts
@@ -32,33 +33,33 @@ export function deserializeInventory(json: string): InventoryData {
 
     // Validate schema
     if (!data.schemaVersion) {
-      throw new Error('Invalid inventory file: missing schemaVersion');
+      throw new Error(ERROR_MESSAGES.MISSING_SCHEMA);
     }
 
-    if (data.schemaVersion !== 1) {
-      throw new Error(`Unsupported schema version: ${data.schemaVersion}`);
+    if (data.schemaVersion !== FILE_CONFIG.SCHEMA_VERSION) {
+      throw new Error(ERROR_MESSAGES.UNSUPPORTED_SCHEMA(data.schemaVersion));
     }
 
     // Validate structure
     if (!Array.isArray(data.contracts)) {
-      throw new Error('Invalid inventory file: contracts must be an array');
+      throw new Error(ERROR_MESSAGES.INVALID_CONTRACTS);
     }
 
     if (!Array.isArray(data.chains)) {
-      throw new Error('Invalid inventory file: chains must be an array');
+      throw new Error(ERROR_MESSAGES.INVALID_CHAINS);
     }
 
     // Validate each contract has required fields
     data.contracts.forEach((contract, index) => {
       if (!contract.id || !contract.label || !contract.address) {
-        throw new Error(`Invalid contract at index ${index}: missing required fields`);
+        throw new Error(ERROR_MESSAGES.INVALID_CONTRACT(index));
       }
     });
 
     return data;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Invalid JSON format');
+      throw new Error(ERROR_MESSAGES.INVALID_JSON);
     }
     throw error;
   }

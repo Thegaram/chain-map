@@ -3,9 +3,9 @@
  * (localStorage doesn't support storing handles)
  */
 
-const DB_NAME = 'contract-inventory-db';
-const STORE_NAME = 'file-handles';
-const HANDLE_KEY = 'current-file-handle';
+import { DB_CONFIG } from '../constants';
+
+const { NAME: DB_NAME, STORE_NAME, HANDLE_KEY } = DB_CONFIG;
 
 /**
  * Open IndexedDB connection

@@ -9,6 +9,7 @@ import { settings } from './settings';
 import { saveFile, loadFile, loadFromHandle, verifyPermission } from '../storage/fileSystem';
 import { serializeInventory, deserializeInventory } from '../storage/serialization';
 import { storeFileHandle, retrieveFileHandle, clearFileHandle } from '../storage/handleStorage';
+import { FILE_CONFIG, AUTO_SAVE, UI_MESSAGES } from '../constants';
 
 /**
  * Current file handle (for File System Access API)
@@ -18,7 +19,7 @@ export const fileHandle = writable<FileSystemFileHandle | null>(null);
 /**
  * Current file name
  */
-export const fileName = writable<string>('inventory.json');
+export const fileName = writable<string>(FILE_CONFIG.DEFAULT_NAME);
 
 /**
  * Dirty state - true if there are unsaved changes
@@ -33,7 +34,7 @@ export const lastSaved = writable<number | null>(null);
 /**
  * Auto-save enabled
  */
-export const autoSaveEnabled = writable<boolean>(true);
+export const autoSaveEnabled = writable<boolean>(AUTO_SAVE.ENABLED_BY_DEFAULT);
 
 /**
  * Currently auto-saving
@@ -65,7 +66,7 @@ inventory.subscribe(() => {
         } finally {
           isAutoSaving.set(false);
         }
-      }, 2000); // 2 second debounce
+      }, AUTO_SAVE.DEBOUNCE_MS);
     }
   }
 });
@@ -213,13 +214,13 @@ export async function restoreLastFile(): Promise<boolean> {
  */
 export async function newInventory(): Promise<void> {
   if (get(isDirty)) {
-    const confirmed = confirm('You have unsaved changes. Create new inventory anyway?');
+    const confirmed = confirm(UI_MESSAGES.UNSAVED_CHANGES);
     if (!confirmed) return;
   }
 
   inventory.clear();
   fileHandle.set(null);
-  fileName.set('inventory.json');
+  fileName.set(FILE_CONFIG.DEFAULT_NAME);
   isDirty.set(false);
   lastSaved.set(null);
 

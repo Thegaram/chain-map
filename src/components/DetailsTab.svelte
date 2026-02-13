@@ -2,6 +2,8 @@
   import { inventory } from '../lib/stores/inventory';
   import { selectedContractId, closeDrawer } from '../lib/stores/selectedContract';
   import { chains } from '../lib/stores/chains';
+  import { parseTags } from '../lib/validation';
+  import { UI_MESSAGES } from '../lib/constants';
   import type { ContractType } from '../lib/types';
 
   $: contract = $selectedContractId ? inventory.getContract($selectedContractId) : null;
@@ -27,28 +29,23 @@
   function handleSave() {
     if (!contract) return;
 
-    const tags = editedTags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
-
     inventory.updateContract(contract.id, {
       label: editedLabel,
       chainId: editedChainId,
       type: editedType,
-      tags,
+      tags: parseTags(editedTags),
       source: editedSource || undefined,
       expectedCodehash: editedCodehash || undefined,
       notes: editedNotes || undefined,
     });
 
-    alert('Contract updated successfully');
+    alert(UI_MESSAGES.SAVE_SUCCESS);
   }
 
   function handleDelete() {
     if (!contract) return;
 
-    if (confirm(`Are you sure you want to delete "${contract.label}"?`)) {
+    if (confirm(UI_MESSAGES.DELETE_CONFIRM(contract.label))) {
       inventory.deleteContract(contract.id);
       closeDrawer();
     }

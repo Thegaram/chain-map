@@ -2,6 +2,7 @@
   import Modal from './Modal.svelte';
   import { inventory } from '../lib/stores/inventory';
   import { chains } from '../lib/stores/chains';
+  import { validateContractForm, parseTags } from '../lib/validation';
   import type { ContractRecord, ContractType } from '../lib/types';
 
   export let open: boolean;
@@ -40,33 +41,21 @@
     notes = '';
   }
 
-  function validate(): boolean {
-    errors = {};
-
-    if (!label.trim()) {
-      errors.label = 'Label is required';
-    }
-
-    if (!address.trim()) {
-      errors.address = 'Address is required';
-    } else if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
-      errors.address = 'Invalid Ethereum address format';
-    }
-
-    if (expectedCodehash && !/^0x[a-fA-F0-9]+$/.test(expectedCodehash.trim())) {
-      errors.expectedCodehash = 'Invalid codehash format (must start with 0x)';
-    }
-
-    return Object.keys(errors).length === 0;
-  }
-
   function handleSubmit() {
-    if (!validate()) return;
+    // Validate form
+    const validation = validateContractForm({
+      label,
+      address,
+      expectedCodehash
+    });
 
-    const tagArray = tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
+    if (!validation.valid) {
+      errors = validation.errors;
+      return;
+    }
+
+    errors = {};
+    const tagArray = parseTags(tags);
 
     if (contract) {
       // Update existing contract

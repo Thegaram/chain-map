@@ -3,6 +3,7 @@
   import type { SortField } from '../lib/stores/sort';
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer } from '../lib/stores/selectedContract';
+  import { STATUS_ICONS } from '../lib/constants';
 
   function shortenAddress(address: string): string {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -15,11 +16,11 @@
 
   function getStatusIcon(status: string): string {
     switch (status) {
-      case 'verified': return '✓';
-      case 'unverified': return '?';
-      case 'pending': return '⋯';
-      case 'failed': return '✗';
-      default: return '?';
+      case 'verified': return STATUS_ICONS.VERIFIED;
+      case 'unverified': return STATUS_ICONS.UNVERIFIED;
+      case 'pending': return STATUS_ICONS.PENDING;
+      case 'failed': return STATUS_ICONS.FAILED;
+      default: return STATUS_ICONS.UNVERIFIED;
     }
   }
 
