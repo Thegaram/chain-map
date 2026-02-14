@@ -4,6 +4,9 @@
   import { chains } from '../lib/stores/chains';
   import { validateContractForm, parseTags } from '../lib/validation';
   import type { ContractRecord, ContractType } from '../lib/types';
+  import { fetchMissingData } from '../lib/chain/autoFetch';
+  import { get } from 'svelte/store';
+  import { saveIfDirty } from '../lib/stores/persistence';
 
   export let open: boolean;
   export let onClose: () => void;
@@ -32,7 +35,7 @@
     source = '';
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     // Validate form
     const validation = validateContractForm({
       label,
@@ -55,9 +58,10 @@
         tags: tagArray,
         source: source.trim() || undefined,
       });
+      await saveIfDirty();
     } else {
       // Add new contract (type will be auto-detected from proxy detection)
-      inventory.addContract({
+      const newContract = inventory.addContract({
         label: label.trim(),
         address: address.trim(),
         chainId,
@@ -65,6 +69,16 @@
         tags: tagArray,
         source: source.trim() || undefined,
       });
+      await saveIfDirty();
+
+      // Auto-fetch on-chain data for newly added contract
+      // Note: Auto-fetch updates won't trigger additional saves
+      if (newContract) {
+        fetchMissingData(
+          newContract,
+          (id, updates) => inventory.updateContract(id, updates)
+        ).catch(err => console.error('Auto-fetch failed:', err));
+      }
     }
 
     handleClose();

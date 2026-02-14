@@ -12,6 +12,7 @@
   import { onMount, tick } from 'svelte';
   import { toast } from '../lib/stores/toast';
   import Skeleton from './Skeleton.svelte';
+  import { saveIfDirty } from '../lib/stores/persistence';
 
   // Make contract reactive to inventory changes
   let contract: ContractRecord | null = null;
@@ -60,9 +61,10 @@
     }, 2000);
   }
 
-  function saveField(field: string, updates: Partial<Omit<ContractRecord, 'id' | 'createdAt'>>) {
+  async function saveField(field: string, updates: Partial<Omit<ContractRecord, 'id' | 'createdAt'>>) {
     if (!contract) return;
     inventory.updateContract(contract.id, updates);
+    await saveIfDirty();
     showSavedIndicator(field);
   }
 
@@ -124,6 +126,7 @@
         codehash: bytecodeInfo.codehash,
         bytecodeSize: bytecodeInfo.size
       });
+      await saveIfDirty();
     } catch (err: any) {
       error = err.message || 'Failed to fetch bytecode';
     } finally {
@@ -151,6 +154,7 @@
         proxyType: proxyInfo.type,
         implementation: proxyInfo.implementation || undefined
       });
+      await saveIfDirty();
     } catch (err: any) {
       console.error('Failed to fetch proxy info:', err);
     } finally {
@@ -178,16 +182,15 @@
 
     <div class="field-group">
       <label for="address">Address</label>
-      <div class="copy-field">
-        <input id="address" type="text" value={contract.address} readonly />
-        <button
-          class="copy-btn"
-          on:click={() => copyToClipboard(contract.address, 'Address')}
-          title="Copy address"
-        >
-          📋
-        </button>
-      </div>
+      <input
+        id="address"
+        type="text"
+        value={contract.address}
+        readonly
+        class="clickable-copy"
+        on:click={() => copyToClipboard(contract.address, 'Address')}
+        title="Click to copy"
+      />
     </div>
 
     <div class="field-group">
@@ -251,18 +254,9 @@
           {#if loadingBytecode}
             <Skeleton width="100%" height="1.2rem" />
           {:else if contract.codehash}
-            <div class="copy-field-inline">
-              <code class="info-value clickable" on:click={() => copyToClipboard(contract.codehash!, 'Codehash')} title="Click to copy">
-                {contract.codehash}
-              </code>
-              <button
-                class="copy-btn-small"
-                on:click={() => copyToClipboard(contract.codehash!, 'Codehash')}
-                title="Copy codehash"
-              >
-                📋
-              </button>
-            </div>
+            <code class="info-value clickable" on:click={() => copyToClipboard(contract.codehash!, 'Codehash')} title="Click to copy">
+              {contract.codehash}
+            </code>
           {:else}
             <span class="info-value empty">—</span>
           {/if}
@@ -419,63 +413,14 @@
     border-radius: 2px;
   }
 
-  .copy-field {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-  }
-
-  .copy-field input {
-    flex: 1;
-  }
-
-  .copy-btn {
-    padding: var(--space-xs);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .copy-btn:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-  }
-
-  .copy-field-inline {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    width: 100%;
-  }
-
-  .copy-field-inline code {
-    flex: 1;
-  }
-
-  .copy-btn-small {
-    padding: 2px 4px;
-    background: transparent;
-    border: none;
-    font-size: 0.75rem;
-    cursor: pointer;
-    opacity: 0.6;
-    transition: opacity 0.15s ease;
-  }
-
-  .copy-btn-small:hover {
-    opacity: 1;
-  }
-
-  .clickable {
+  .clickable,
+  .clickable-copy {
     cursor: pointer;
     transition: color 0.15s ease;
   }
 
-  .clickable:hover {
+  .clickable:hover,
+  .clickable-copy:hover {
     color: var(--accent);
   }
 

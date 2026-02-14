@@ -1,10 +1,16 @@
 <script lang="ts">
   import { getShortcuts, formatShortcut } from '../lib/keyboardShortcuts';
 
+  export let open = false;
+
   let showHints = false;
+
+  // Sync with external open prop
+  $: showHints = open;
 
   function toggleHints() {
     showHints = !showHints;
+    open = showHints;
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -28,10 +34,6 @@
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
-
-<button class="hint-trigger" on:click={toggleHints} title="Keyboard shortcuts (?)">
-  ⌨
-</button>
 
 {#if showHints}
   <div class="hints-overlay" on:click={toggleHints} role="button" tabindex="-1">
@@ -64,20 +66,6 @@
 {/if}
 
 <style>
-  .hint-trigger {
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background: var(--bg-secondary);
-    font-size: 1rem;
-    transition: all 0.15s ease;
-  }
-
-  .hint-trigger:hover {
-    border-color: var(--border-hover);
-    background: var(--bg-tertiary);
-  }
-
   .hints-overlay {
     position: fixed;
     top: 0;

@@ -9,7 +9,8 @@ import { settings } from './settings';
 import { saveFile, loadFile, loadFromHandle, verifyPermission } from '../storage/fileSystem';
 import { serializeInventory, deserializeInventory } from '../storage/serialization';
 import { storeFileHandle, retrieveFileHandle, clearFileHandle } from '../storage/handleStorage';
-import { FILE_CONFIG, AUTO_SAVE, UI_MESSAGES } from '../constants';
+import { FILE_CONFIG, UI_MESSAGES } from '../constants';
+import { fetchMissingDataBatch } from '../chain/autoFetch';
 
 /**
  * Current file handle (for File System Access API)
@@ -32,42 +33,28 @@ export const isDirty = writable<boolean>(false);
 export const lastSaved = writable<number | null>(null);
 
 /**
- * Auto-save enabled
+ * Currently saving
  */
-export const autoSaveEnabled = writable<boolean>(AUTO_SAVE.ENABLED_BY_DEFAULT);
+export const isSaving = writable<boolean>(false);
 
 /**
- * Currently auto-saving
+ * Loading file flag (store to share state across hot-reload instances)
  */
-export const isAutoSaving = writable<boolean>(false);
-
-let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+const isLoadingFile = writable<boolean>(false);
 
 /**
- * Mark inventory as dirty when changes occur and trigger auto-save
+ * Mark inventory as dirty when changes occur
+ * Note: Only marks dirty, does not auto-save
  */
 inventory.subscribe(() => {
+  // Don't mark dirty if we're currently loading a file
+  if (get(isLoadingFile)) {
+    return;
+  }
+
+  // Mark dirty if we have a file to save to
   if (get(lastSaved) !== null) {
     isDirty.set(true);
-
-    // Clear existing timeout
-    if (autoSaveTimeout) {
-      clearTimeout(autoSaveTimeout);
-    }
-
-    // Schedule auto-save if enabled and we have a file handle
-    if (get(autoSaveEnabled) && get(fileHandle)) {
-      autoSaveTimeout = setTimeout(async () => {
-        try {
-          isAutoSaving.set(true);
-          await saveInventory(false);
-        } catch (error) {
-          console.error('Auto-save failed:', error);
-        } finally {
-          isAutoSaving.set(false);
-        }
-      }, AUTO_SAVE.DEBOUNCE_MS);
-    }
   }
 });
 
@@ -85,6 +72,8 @@ export async function saveInventory(saveAs: boolean = false): Promise<boolean> {
       get(chains),
       get(settings)
     );
+
+    isSaving.set(true);
 
     // Save file
     const handle = await saveFile(
@@ -116,6 +105,17 @@ export async function saveInventory(saveAs: boolean = false): Promise<boolean> {
   } catch (error) {
     console.error('Failed to save inventory:', error);
     throw error;
+  } finally {
+    isSaving.set(false);
+  }
+}
+
+/**
+ * Save inventory immediately if there are unsaved changes
+ */
+export async function saveIfDirty(): Promise<void> {
+  if (get(isDirty) && get(fileHandle)) {
+    await saveInventory(false);
   }
 }
 
@@ -134,29 +134,49 @@ export async function loadInventory(): Promise<boolean> {
     // Deserialize and validate
     const data = deserializeInventory(result.content);
 
-    // Load into stores
-    inventory.load(data.contracts);
-    chains.load(data.chains);
-    settings.update(s => ({ ...s, ...data.settings }));
+    // Set loading flag to prevent marking dirty during load
+    isLoadingFile.set(true);
 
-    // Update persistence state
-    if (result.handle) {
-      fileHandle.set(result.handle);
-      fileName.set(result.handle.name);
+    try {
+      // Update persistence state BEFORE loading data
+      isDirty.set(false);
+      lastSaved.set(null);
 
-      // Store handle in IndexedDB for persistence across refreshes
-      await storeFileHandle(result.handle);
-    } else {
-      fileHandle.set(null);
-      fileName.set('inventory.json');
+      // Load into stores
+      inventory.load(data.contracts);
+      chains.load(data.chains);
+      settings.update(s => ({ ...s, ...data.settings }));
+
+      // Update file state
+      if (result.handle) {
+        fileHandle.set(result.handle);
+        fileName.set(result.handle.name);
+
+        // Store handle in IndexedDB for persistence across refreshes
+        await storeFileHandle(result.handle);
+      } else {
+        fileHandle.set(null);
+        fileName.set('inventory.json');
+      }
+
+      // Mark as saved after loading
+      lastSaved.set(Date.now());
+    } finally {
+      // Always clear loading flag
+      isLoadingFile.set(false);
     }
 
-    isDirty.set(false);
-    lastSaved.set(Date.now());
+    // Auto-fetch missing on-chain data in background
+    // Note: This won't trigger saves because we save explicitly on user edits only
+    fetchMissingDataBatch(
+      get(inventory),
+      (id, updates) => inventory.updateContract(id, updates)
+    ).catch(err => console.error('Auto-fetch failed:', err));
 
     return true;
   } catch (error) {
     console.error('Failed to load inventory:', error);
+    isLoadingFile.set(false);
     throw error;
   }
 }
@@ -189,20 +209,38 @@ export async function restoreLastFile(): Promise<boolean> {
     // Deserialize and validate
     const data = deserializeInventory(content);
 
-    // Load into stores
-    inventory.load(data.contracts);
-    chains.load(data.chains);
-    settings.update(s => ({ ...s, ...data.settings }));
+    // Set loading flag to prevent marking dirty during load
+    isLoadingFile.set(true);
 
-    // Update persistence state
-    fileHandle.set(handle);
-    fileName.set(handle.name);
-    isDirty.set(false);
-    lastSaved.set(Date.now());
+    try {
+      // Update persistence state BEFORE loading data
+      isDirty.set(false);
+      lastSaved.set(null);
+
+      // Load into stores
+      inventory.load(data.contracts);
+      chains.load(data.chains);
+      settings.update(s => ({ ...s, ...data.settings }));
+
+      // Update file state
+      fileHandle.set(handle);
+      fileName.set(handle.name);
+      lastSaved.set(Date.now());
+    } finally {
+      // Always clear loading flag
+      isLoadingFile.set(false);
+    }
+
+    // Auto-fetch missing on-chain data in background
+    fetchMissingDataBatch(
+      get(inventory),
+      (id, updates) => inventory.updateContract(id, updates)
+    ).catch(err => console.error('Auto-fetch failed:', err));
 
     return true;
   } catch (error) {
     console.error('Failed to restore last file:', error);
+    isLoadingFile.set(false);
     // Clear stored handle if we can't load it
     await clearFileHandle();
     return false;
@@ -218,7 +256,8 @@ export async function newInventory(): Promise<void> {
     if (!confirmed) return;
   }
 
-  inventory.clear();
+  // CRITICAL: Clear file state BEFORE clearing inventory
+  // This prevents marking the new empty inventory as dirty
   fileHandle.set(null);
   fileName.set(FILE_CONFIG.DEFAULT_NAME);
   isDirty.set(false);
@@ -226,6 +265,9 @@ export async function newInventory(): Promise<void> {
 
   // Clear stored file handle
   await clearFileHandle();
+
+  // Now safe to clear inventory (won't be marked as dirty)
+  inventory.clear();
 }
 
 /**
@@ -253,9 +295,9 @@ export function exportInventory(): void {
  * Derived store: Display name for current file
  */
 export const displayFileName = derived(
-  [fileName, isDirty, isAutoSaving],
-  ([$fileName, $isDirty, $isAutoSaving]) => {
-    if ($isAutoSaving) {
+  [fileName, isDirty, isSaving],
+  ([$fileName, $isDirty, $isSaving]) => {
+    if ($isSaving) {
       return `${$fileName} (saving...)`;
     }
     return $isDirty ? `${$fileName} *` : $fileName;

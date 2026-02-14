@@ -21,12 +21,6 @@ export const DB_CONFIG = {
   HANDLE_KEY: 'current-file-handle'
 } as const;
 
-// Auto-save configuration
-export const AUTO_SAVE = {
-  DEBOUNCE_MS: 2000,
-  ENABLED_BY_DEFAULT: true
-} as const;
-
 // Validation patterns
 export const VALIDATION = {
   ETH_ADDRESS: /^0x[a-fA-F0-9]{40}$/,

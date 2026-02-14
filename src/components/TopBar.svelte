@@ -3,24 +3,17 @@
   import { settings } from '../lib/stores/settings';
   import { chains } from '../lib/stores/chains';
   import { inventory } from '../lib/stores/inventory';
-  import { saveInventory, loadInventory, isDirty } from '../lib/stores/persistence';
-  import { getBytecodeInfo } from '../lib/chain/bytecode';
-  import { toast } from '../lib/stores/toast';
+  import { saveInventory, loadInventory, isDirty, displayFileName, saveIfDirty } from '../lib/stores/persistence';
   import ContractFormModal from './ContractFormModal.svelte';
-  import KeyboardHints from './KeyboardHints.svelte';
-  import FileMenu from './FileMenu.svelte';
+  import ActionsMenu from './ActionsMenu.svelte';
   import { registerShortcut, unregisterShortcut } from '../lib/keyboardShortcuts';
   import type { ShortcutHandler } from '../lib/keyboardShortcuts';
   import { SHORTCUTS, THEME_ICONS } from '../lib/constants';
   import { onMount } from 'svelte';
-  import type { Address } from 'viem';
 
   let currentTheme: 'light' | 'dark' = 'light';
   let showAddModal = false;
   let searchInput: HTMLInputElement;
-  let bulkRefreshing = false;
-
-  $: contractsWithoutCodehash = $inventory.filter(c => !c.codehash).length;
 
   function toggleTheme() {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -31,51 +24,6 @@
 
   function handleAddRecord() {
     showAddModal = true;
-  }
-
-  async function handleBulkRefreshCodehash() {
-    const contractsToRefresh = $inventory.filter(c => !c.codehash);
-
-    if (contractsToRefresh.length === 0) {
-      toast.show('All contracts already have codehashes', 'info');
-      return;
-    }
-
-    if (!confirm(`Refresh codehash for ${contractsToRefresh.length} contracts?`)) {
-      return;
-    }
-
-    bulkRefreshing = true;
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const contract of contractsToRefresh) {
-      try {
-        const bytecodeInfo = await getBytecodeInfo(
-          contract.address as Address,
-          contract.chainId
-        );
-
-        if (!bytecodeInfo.isEmpty) {
-          inventory.updateContract(contract.id, {
-            codehash: bytecodeInfo.codehash,
-            bytecodeSize: bytecodeInfo.size
-          });
-          successCount++;
-        }
-      } catch (err) {
-        console.error(`Failed to fetch codehash for ${contract.label}:`, err);
-        errorCount++;
-      }
-    }
-
-    bulkRefreshing = false;
-
-    if (errorCount > 0) {
-      toast.show(`Refreshed ${successCount} codehashes, ${errorCount} failed`, 'info');
-    } else {
-      toast.show(`Successfully refreshed ${successCount} codehashes`);
-    }
   }
 
   // Initialize theme on mount
@@ -133,8 +81,9 @@
       {
         key: 'z',
         ctrl: true,
-        handler: () => {
+        handler: async () => {
           inventory.undo();
+          await saveIfDirty();
         },
         description: 'Undo'
       },
@@ -142,8 +91,9 @@
         key: 'z',
         ctrl: true,
         shift: true,
-        handler: () => {
+        handler: async () => {
           inventory.redo();
+          await saveIfDirty();
         },
         description: 'Redo'
       }
@@ -198,29 +148,19 @@
     </select>
   </div>
 
-  <div class="top-bar-section actions">
-    <FileMenu />
-
-    {#if contractsWithoutCodehash > 0}
-      <button
-        class="action-btn"
-        on:click={handleBulkRefreshCodehash}
-        disabled={bulkRefreshing}
-        title="Refresh codehash for {contractsWithoutCodehash} contracts"
-      >
-        {#if bulkRefreshing}
-          <span class="spinner-small"></span>
-        {:else}
-          ↻ {contractsWithoutCodehash}
-        {/if}
-      </button>
+  <div class="top-bar-section file-status">
+    <span class="file-name">{$displayFileName}</span>
+    {#if $isDirty}
+      <span class="unsaved-indicator" title="Unsaved changes">●</span>
     {/if}
+  </div>
+
+  <div class="top-bar-section actions">
+    <ActionsMenu />
 
     <button class="action-btn" on:click={handleAddRecord} title="Add record (N)">
       +
     </button>
-
-    <KeyboardHints />
 
     <button class="action-btn" on:click={toggleTheme} title="Toggle theme">
       {currentTheme === 'light' ? THEME_ICONS.LIGHT : THEME_ICONS.DARK}
@@ -303,23 +243,27 @@
     outline-offset: 2px;
   }
 
-  .action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .file-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--text-tertiary);
+    font-size: var(--font-size-xs);
   }
 
-  .spinner-small {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--border-color);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+  .file-name {
+    opacity: 0.7;
   }
 
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  .unsaved-indicator {
+    color: var(--accent);
+    font-size: 0.5rem;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 </style>
 

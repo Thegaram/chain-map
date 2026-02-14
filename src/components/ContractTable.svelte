@@ -11,6 +11,7 @@
   import type { MenuItem } from './ContextMenu.svelte';
   import type { ContractRecord } from '../lib/types';
   import { toast } from '../lib/stores/toast';
+  import { saveIfDirty } from '../lib/stores/persistence';
 
   let rowElements: { [key: string]: HTMLTableRowElement } = {};
 
@@ -51,7 +52,7 @@
     contextMenuVisible = true;
   }
 
-  function handleContextMenuSelect(event: CustomEvent<string>) {
+  async function handleContextMenuSelect(event: CustomEvent<string>) {
     const action = event.detail;
     if (!contextMenuContract) return;
 
@@ -79,10 +80,12 @@
           tags: [...contract.tags],
           source: contract.source,
         });
+        await saveIfDirty();
         break;
       case 'delete':
         if (confirm(`Delete "${contract.label}"?`)) {
           inventory.deleteContract(contract.id);
+          await saveIfDirty();
         }
         break;
     }
@@ -111,9 +114,6 @@
           Chain {getSortIcon('chain')}
         </th>
         <th>Address</th>
-        <th class="sortable type-header" on:click={() => handleSort('type')}>
-          Proxy {getSortIcon('type')}
-        </th>
         <th>Source</th>
         <th>Tags</th>
       </tr>
@@ -131,7 +131,14 @@
           on:contextmenu={(e) => handleContextMenu(e, contract)}
           bind:this={rowElements[contract.id]}
         >
-          <td class="label-cell">{contract.label}</td>
+          <td class="label-cell">
+            <span class="label-content">
+              {contract.label}
+              {#if contract.type === 'proxy'}
+                <span class="proxy-badge" title="Proxy contract">⇄</span>
+              {/if}
+            </span>
+          </td>
           <td>{chain?.shortName || `Chain ${contract.chainId}`}</td>
           <td class="address-cell">
             {#if explorerUrl}
@@ -146,15 +153,6 @@
               </a>
             {:else}
               {shortenAddress(contract.address)}
-            {/if}
-          </td>
-          <td class="type-cell">
-            {#if contract.type === 'proxy'}
-              ✓
-            {:else if contract.type === 'implementation'}
-              —
-            {:else}
-              <!-- Empty for unchecked/unknown -->
             {/if}
           </td>
           <td class="source-cell">
@@ -279,6 +277,21 @@
     font-weight: 500;
   }
 
+  .label-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .proxy-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
   .address-cell {
     font-family: var(--font-mono);
     color: var(--text-secondary);
@@ -318,15 +331,6 @@
     border: 1px solid var(--border-color);
     border-radius: 3px;
     font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
-
-  .type-header {
-    text-align: center;
-  }
-
-  .type-cell {
-    text-align: center;
     color: var(--text-secondary);
   }
 
