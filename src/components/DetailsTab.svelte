@@ -1,6 +1,6 @@
 <script lang="ts">
   import { inventory } from '../lib/stores/inventory';
-  import { selectedContractId, closeDrawer, openDrawer } from '../lib/stores/ui';
+  import { selectedContractId, closeDrawer, openDrawer, openContractForm } from '../lib/stores/ui';
   import { chains, chainMap } from '../lib/stores/chains';
   import { parseTags } from '../lib/validation';
   import { UI_MESSAGES } from '../lib/constants';
@@ -13,6 +13,7 @@
   import { toast } from '../lib/stores/ui';
   import Skeleton from './Skeleton.svelte';
   import { saveIfDirty } from '../lib/stores/persistence';
+  import { createAddressLink, formatAddress } from '../lib/addressLink';
 
   // Make contract reactive to inventory changes
   let contract: ContractRecord | null = null;
@@ -22,11 +23,6 @@
     contract = null;
   }
   $: chain = contract ? $chainMap.get(contract.chainId) : null;
-
-  // Check if implementation address exists in inventory
-  $: implementationContract = contract?.implementation
-    ? $inventory.find(c => c.address.toLowerCase() === contract.implementation?.toLowerCase())
-    : null;
 
   let editedLabel = '';
   let editedChainId = 1;
@@ -99,8 +95,11 @@
   }
 
   function handleImplementationClick() {
-    if (implementationContract) {
-      openDrawer(implementationContract.id);
+    if (!contract?.implementation) return;
+
+    const link = createAddressLink(contract.implementation, $inventory, chain);
+    if (link.type === 'inventory' && link.contractId) {
+      openDrawer(link.contractId);
     }
   }
 
@@ -307,18 +306,39 @@
             <Skeleton width="100%" height="1.2rem" />
           </div>
         {:else if contract.implementation}
+          {@const link = createAddressLink(contract.implementation, $inventory, chain)}
           <div class="info-item">
             <div class="info-header">
               <span class="info-label">Implementation</span>
             </div>
-            {#if implementationContract}
+            {#if link.type === 'inventory'}
               <div>
-                <button class="implementation-link" on:click={handleImplementationClick} title="Open {implementationContract.label}">
-                  {contract.implementation} → {implementationContract.label}
+                <button class="implementation-link" on:click={handleImplementationClick} title="Open {link.label}">
+                  {contract.implementation} → {link.label}
                 </button>
               </div>
             {:else}
-              <code class="info-value">{contract.implementation}</code>
+              <div class="implementation-with-add">
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener"
+                  class="implementation-link explorer-link"
+                  title="View on explorer"
+                >
+                  {contract.implementation} ↗
+                </a>
+                <button
+                  class="add-btn-impl"
+                  on:click={() => {
+                    closeDrawer();
+                    setTimeout(() => openContractForm(contract.implementation), 100);
+                  }}
+                  title="Add to inventory"
+                >
+                  +
+                </button>
+              </div>
             {/if}
           </div>
         {/if}
@@ -352,12 +372,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
-  }
-
-  .field-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-md);
   }
 
   label {
@@ -506,20 +520,6 @@
     opacity: 0.5;
   }
 
-  .spinner-small {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--border-color);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
   .explorer-link {
     color: var(--accent);
     text-decoration: none;
@@ -570,5 +570,29 @@
     padding: var(--space-2xl);
     text-align: center;
     color: var(--text-tertiary);
+  }
+
+  .implementation-with-add {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .add-btn-impl {
+    padding: 2px 6px;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .add-btn-impl:hover {
+    background: var(--accent);
+    color: white;
   }
 </style>

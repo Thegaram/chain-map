@@ -1,9 +1,10 @@
 <script lang="ts">
   import DetailsTab from './DetailsTab.svelte';
   import AbiTab from './AbiTab.svelte';
-  import { drawerOpen, selectedContractId, activeTab, closeDrawer } from '../lib/stores/ui';
+  import { drawerOpen, selectedContractId, activeTab, closeDrawer, setActiveTab, goBack, goForward, canGoBack, canGoForward } from '../lib/stores/ui';
   import { inventory } from '../lib/stores/inventory';
   import { UI_MESSAGES } from '../lib/constants';
+  import { saveIfDirty } from '../lib/stores/persistence';
   import { onMount } from 'svelte';
 
   const MIN_WIDTH = 400;
@@ -27,7 +28,7 @@
   });
 
   function handleTabChange(tab: 'details' | 'abi') {
-    activeTab.set(tab);
+    setActiveTab(tab);
   }
 
   function handleBackdropClick(event: MouseEvent) {
@@ -45,17 +46,17 @@
     // Arrow key navigation between tabs
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      activeTab.set('details');
+      setActiveTab('details');
       return;
     }
     if (event.key === 'ArrowRight') {
       event.preventDefault();
-      activeTab.set('abi');
+      setActiveTab('abi');
       return;
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!$selectedContractId) return;
 
     const contract = $inventory.find(c => c.id === $selectedContractId);
@@ -63,6 +64,7 @@
 
     if (confirm(UI_MESSAGES.DELETE_CONFIRM(contract.label))) {
       inventory.deleteContract($selectedContractId);
+      await saveIfDirty();
       closeDrawer();
     }
   }
@@ -107,27 +109,47 @@
         aria-label="Resize drawer"
       ></div>
       <div class="drawer-header">
-        <div class="tabs" role="tablist">
-          <button
-            class="tab"
-            class:active={$activeTab === 'details'}
-            on:click={() => handleTabChange('details')}
-            role="tab"
-            aria-selected={$activeTab === 'details'}
-            tabindex={$activeTab === 'details' ? 0 : -1}
-          >
-            Details
-          </button>
-          <button
-            class="tab"
-            class:active={$activeTab === 'abi'}
-            on:click={() => handleTabChange('abi')}
-            role="tab"
-            aria-selected={$activeTab === 'abi'}
-            tabindex={$activeTab === 'abi' ? 0 : -1}
-          >
-            ABI
-          </button>
+        <div class="header-left">
+          <div class="nav-buttons">
+            <button
+              class="nav-btn"
+              on:click={goBack}
+              disabled={!$canGoBack}
+              title="Go back"
+            >
+              ←
+            </button>
+            <button
+              class="nav-btn"
+              on:click={goForward}
+              disabled={!$canGoForward}
+              title="Go forward"
+            >
+              →
+            </button>
+          </div>
+          <div class="tabs" role="tablist">
+            <button
+              class="tab"
+              class:active={$activeTab === 'details'}
+              on:click={() => handleTabChange('details')}
+              role="tab"
+              aria-selected={$activeTab === 'details'}
+              tabindex={$activeTab === 'details' ? 0 : -1}
+            >
+              Details
+            </button>
+            <button
+              class="tab"
+              class:active={$activeTab === 'abi'}
+              on:click={() => handleTabChange('abi')}
+              role="tab"
+              aria-selected={$activeTab === 'abi'}
+              tabindex={$activeTab === 'abi' ? 0 : -1}
+            >
+              ABI
+            </button>
+          </div>
         </div>
 
         <div class="header-actions">
@@ -200,6 +222,42 @@
     padding: var(--space-sm) var(--space-md);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-secondary);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .nav-buttons {
+    display: flex;
+    gap: 2px;
+  }
+
+  .nav-btn {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: all 0.15s ease;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-btn:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
   }
 
   .tabs {

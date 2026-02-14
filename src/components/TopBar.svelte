@@ -4,6 +4,7 @@
   import { chains } from '../lib/stores/chains';
   import { inventory } from '../lib/stores/inventory';
   import { saveInventory, loadInventory, isDirty, displayFileName, saveIfDirty } from '../lib/stores/persistence';
+  import { contractFormOpen, contractFormInitialAddress, openContractForm, closeContractForm } from '../lib/stores/ui';
   import ContractFormModal from './ContractFormModal.svelte';
   import ActionsMenu from './ActionsMenu.svelte';
   import { registerShortcut, unregisterShortcut } from '../lib/keyboardShortcuts';
@@ -12,7 +13,6 @@
   import { onMount } from 'svelte';
 
   let currentTheme: 'light' | 'dark' = 'light';
-  let showAddModal = false;
   let searchInput: HTMLInputElement;
 
   function toggleTheme() {
@@ -23,7 +23,7 @@
   }
 
   function handleAddRecord() {
-    showAddModal = true;
+    openContractForm();
   }
 
   // Initialize theme on mount
@@ -268,6 +268,7 @@
 </style>
 
 <ContractFormModal
-  open={showAddModal}
-  onClose={() => showAddModal = false}
+  open={$contractFormOpen}
+  onClose={closeContractForm}
+  initialAddress={$contractFormInitialAddress}
 />

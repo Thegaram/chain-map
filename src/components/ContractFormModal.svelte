@@ -11,6 +11,7 @@
   export let open: boolean;
   export let onClose: () => void;
   export let contract: ContractRecord | null = null;
+  export let initialAddress: string | undefined = undefined;
 
   let label = '';
   let address = '';
@@ -29,7 +30,7 @@
   } else if (open) {
     // Reset form for new contract
     label = '';
-    address = '';
+    address = initialAddress || '';
     chainId = 1;
     tags = '';
     source = '';
@@ -72,12 +73,14 @@
       await saveIfDirty();
 
       // Auto-fetch on-chain data for newly added contract
-      // Note: Auto-fetch updates won't trigger additional saves
       if (newContract) {
         fetchMissingData(
           newContract,
           (id, updates) => inventory.updateContract(id, updates)
-        ).catch(err => console.error('Auto-fetch failed:', err));
+        ).then(() => {
+          // Save after auto-fetch completes
+          saveIfDirty();
+        }).catch(err => console.error('Auto-fetch failed:', err));
       }
     }
 
@@ -221,13 +224,11 @@
   }
 
   input,
-  select,
-  textarea {
+  select {
     font-family: var(--font-mono);
   }
 
-  input.error,
-  textarea.error {
+  input.error {
     border-color: #e03131;
   }
 
@@ -244,12 +245,6 @@
   .help-text {
     font-size: var(--font-size-sm);
     color: var(--text-tertiary);
-  }
-
-  textarea {
-    resize: vertical;
-    font-family: var(--font-mono);
-    line-height: 1.5;
   }
 
   .form-actions {

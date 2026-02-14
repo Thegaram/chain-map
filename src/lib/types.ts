@@ -12,12 +12,17 @@ export interface ContractRecord {
   type: ContractType;
   tags: string[];
   source?: string;
-  abiId?: string;
+  // ABI data
+  abi?: any[]; // Contract ABI
+  abiSource?: 'explorer' | 'manual'; // Where ABI came from
+  abiContractName?: string; // Contract name from explorer
   // Cached on-chain data
   codehash?: string;
   bytecodeSize?: number;
   proxyType?: 'eip1967' | 'eip1167' | 'none';
   implementation?: string;
+  // Cached view function results
+  viewFunctionCache?: { [key: string]: { value: any; timestamp: number } };
   createdAt: number;
   updatedAt: number;
 }
@@ -40,6 +45,7 @@ export interface ChainConfig {
   rpcUrls: string[];
   explorerUrl?: string;
   explorerApiUrl?: string;
+  explorerApiKey?: string;
 }
 
 export interface AppSettings {
@@ -75,7 +81,7 @@ export const DEFAULT_CHAINS: ChainConfig[] = [
     shortName: 'Ethereum',
     rpcUrls: ['https://eth.llamarpc.com'],
     explorerUrl: 'https://etherscan.io',
-    explorerApiUrl: 'https://api.etherscan.io/api'
+    explorerApiUrl: 'https://api.etherscan.io/v2/api'
   },
   {
     chainId: 534352,
@@ -83,7 +89,7 @@ export const DEFAULT_CHAINS: ChainConfig[] = [
     shortName: 'Scroll',
     rpcUrls: ['https://rpc.scroll.io'],
     explorerUrl: 'https://scrollscan.com',
-    explorerApiUrl: 'https://api.scrollscan.com/api'
+    explorerApiUrl: 'https://api.etherscan.io/v2/api'
   },
   {
     chainId: 10,
@@ -91,7 +97,7 @@ export const DEFAULT_CHAINS: ChainConfig[] = [
     shortName: 'Optimism',
     rpcUrls: ['https://mainnet.optimism.io'],
     explorerUrl: 'https://optimistic.etherscan.io',
-    explorerApiUrl: 'https://api-optimistic.etherscan.io/api'
+    explorerApiUrl: 'https://api.etherscan.io/v2/api'
   },
   {
     chainId: 42161,
@@ -99,7 +105,7 @@ export const DEFAULT_CHAINS: ChainConfig[] = [
     shortName: 'Arbitrum',
     rpcUrls: ['https://arb1.arbitrum.io/rpc'],
     explorerUrl: 'https://arbiscan.io',
-    explorerApiUrl: 'https://api.arbiscan.io/api'
+    explorerApiUrl: 'https://api.etherscan.io/v2/api'
   },
   {
     chainId: 8453,
@@ -107,7 +113,7 @@ export const DEFAULT_CHAINS: ChainConfig[] = [
     shortName: 'Base',
     rpcUrls: ['https://mainnet.base.org'],
     explorerUrl: 'https://basescan.org',
-    explorerApiUrl: 'https://api.basescan.org/api'
+    explorerApiUrl: 'https://api.etherscan.io/v2/api'
   }
 ];
 

@@ -21,7 +21,13 @@ export function serializeInventory(
     chains,
     contracts
   };
-  return JSON.stringify(data, null, 2);
+  // Custom replacer to handle BigInt values
+  return JSON.stringify(data, (key, value) => {
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+    return value;
+  }, 2);
 }
 
 export function deserializeInventory(json: string): InventoryData {

@@ -13,22 +13,71 @@ interface DrawerState {
   tab: 'details' | 'abi';
 }
 
+interface DrawerHistory {
+  history: string[];
+  currentIndex: number;
+}
+
 const drawerState = writable<DrawerState>({
   open: false,
   contractId: null,
   tab: 'details'
 });
 
+const drawerHistory = writable<DrawerHistory>({
+  history: [],
+  currentIndex: -1
+});
+
 export const selectedContractId = derived(drawerState, $d => $d.contractId);
 export const drawerOpen = derived(drawerState, $d => $d.open);
 export const activeTab = derived(drawerState, $d => $d.tab);
 
-export function openDrawer(contractId: string) {
+export const canGoBack = derived(drawerHistory, $h => $h.currentIndex > 0);
+export const canGoForward = derived(drawerHistory, $h => $h.currentIndex < $h.history.length - 1);
+
+export function openDrawer(contractId: string, skipHistory = false) {
   drawerState.set({ open: true, contractId, tab: 'details' });
+
+  if (!skipHistory) {
+    drawerHistory.update(h => {
+      // If we're not at the end of history, truncate the future
+      const newHistory = h.history.slice(0, h.currentIndex + 1);
+      // Add new contract ID (avoid duplicates of the same contract in a row)
+      if (newHistory[newHistory.length - 1] !== contractId) {
+        newHistory.push(contractId);
+        return {
+          history: newHistory,
+          currentIndex: newHistory.length - 1
+        };
+      }
+      return h;
+    });
+  }
 }
 
 export function closeDrawer() {
   drawerState.set({ open: false, contractId: null, tab: 'details' });
+}
+
+export function goBack() {
+  const h = get(drawerHistory);
+  if (h.currentIndex > 0) {
+    const newIndex = h.currentIndex - 1;
+    const contractId = h.history[newIndex];
+    drawerHistory.set({ ...h, currentIndex: newIndex });
+    drawerState.set({ open: true, contractId, tab: 'details' });
+  }
+}
+
+export function goForward() {
+  const h = get(drawerHistory);
+  if (h.currentIndex < h.history.length - 1) {
+    const newIndex = h.currentIndex + 1;
+    const contractId = h.history[newIndex];
+    drawerHistory.set({ ...h, currentIndex: newIndex });
+    drawerState.set({ open: true, contractId, tab: 'details' });
+  }
 }
 
 export function setActiveTab(tab: 'details' | 'abi') {
@@ -85,6 +134,29 @@ export const keyboardFocus = {
     }
   }
 };
+
+// --- Contract Form Modal ---
+
+interface ContractFormState {
+  open: boolean;
+  initialAddress?: string;
+}
+
+const contractFormState = writable<ContractFormState>({
+  open: false,
+  initialAddress: undefined
+});
+
+export const contractFormOpen = derived(contractFormState, $s => $s.open);
+export const contractFormInitialAddress = derived(contractFormState, $s => $s.initialAddress);
+
+export function openContractForm(initialAddress?: string) {
+  contractFormState.set({ open: true, initialAddress });
+}
+
+export function closeContractForm() {
+  contractFormState.set({ open: false, initialAddress: undefined });
+}
 
 // --- Toast Notifications ---
 
