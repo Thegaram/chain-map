@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { sortedContracts, sort } from '../lib/stores/sort';
-  import type { SortField } from '../lib/stores/sort';
+  import { sortedContracts, sort } from '../lib/stores/viewState';
+  import type { SortField } from '../lib/stores/viewState';
   import { chainMap } from '../lib/stores/chains';
-  import { openDrawer, selectedContractId } from '../lib/stores/selectedContract';
-  import { focusedContractId } from '../lib/stores/keyboardFocus';
+  import { openDrawer, selectedContractId } from '../lib/stores/ui';
+  import { focusedContractId } from '../lib/stores/ui';
   import { inventory } from '../lib/stores/inventory';
   import { formatGitHubSource, getGitHubUrl, getExplorerAddressUrl } from '../lib/links';
   import { onMount, tick } from 'svelte';
   import ContextMenu from './ContextMenu.svelte';
   import type { MenuItem } from './ContextMenu.svelte';
   import type { ContractRecord } from '../lib/types';
-  import { toast } from '../lib/stores/toast';
+  import { toast } from '../lib/stores/ui';
   import { saveIfDirty } from '../lib/stores/persistence';
 
   let rowElements: { [key: string]: HTMLTableRowElement } = {};

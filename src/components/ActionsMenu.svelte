@@ -1,6 +1,6 @@
 <script lang="ts">
   import { saveInventory, loadInventory, newInventory, isDirty } from '../lib/stores/persistence';
-  import { toast } from '../lib/stores/toast';
+  import { toast } from '../lib/stores/ui';
   import KeyboardHints from './KeyboardHints.svelte';
 
   let showMenu = false;

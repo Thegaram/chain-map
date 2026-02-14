@@ -2,10 +2,8 @@
  * Keyboard shortcuts manager
  */
 
-import { keyboardFocusIndex, focusedContractId } from './stores/keyboardFocus';
-import { openDrawer, drawerOpen } from './stores/selectedContract';
+import { keyboardFocus, focusedContractId, openDrawer, drawerOpen, toast } from './stores/ui';
 import { inventory } from './stores/inventory';
-import { toast } from './stores/toast';
 import { get } from 'svelte/store';
 
 export interface ShortcutHandler {
@@ -62,14 +60,14 @@ export function handleKeydown(event: KeyboardEvent) {
   if (!isInInput && !get(drawerOpen)) {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      keyboardFocusIndex.initializeFocus();
-      keyboardFocusIndex.focusNext();
+      keyboardFocus.initialize();
+      keyboardFocus.next();
       return;
     }
     if (event.key === 'ArrowUp') {
       event.preventDefault();
-      keyboardFocusIndex.initializeFocus();
-      keyboardFocusIndex.focusPrevious();
+      keyboardFocus.initialize();
+      keyboardFocus.previous();
       return;
     }
     if (event.key === 'Enter') {

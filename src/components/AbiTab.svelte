@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { selectedContractId } from '../lib/stores/selectedContract';
+  import { selectedContractId } from '../lib/stores/ui';
   import { inventory } from '../lib/stores/inventory';
 
   $: contract = $selectedContractId ? inventory.getContract($selectedContractId) : null;

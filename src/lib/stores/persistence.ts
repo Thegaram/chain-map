@@ -6,11 +6,9 @@ import { writable, derived, get } from 'svelte/store';
 import { inventory } from './inventory';
 import { chains } from './chains';
 import { settings } from './settings';
-import { saveFile, loadFile, loadFromHandle, verifyPermission } from '../storage/fileSystem';
-import { serializeInventory, deserializeInventory } from '../storage/serialization';
-import { storeFileHandle, retrieveFileHandle, clearFileHandle } from '../storage/handleStorage';
+import { saveFile, loadFile, loadFromHandle, verifyPermission, serializeInventory, deserializeInventory, storeFileHandle, retrieveFileHandle, clearFileHandle } from '../storage';
 import { FILE_CONFIG, UI_MESSAGES } from '../constants';
-import { fetchMissingDataBatch } from '../chain/autoFetch';
+import { fetchMissingDataBatch } from '../onchain';
 
 /**
  * Current file handle (for File System Access API)

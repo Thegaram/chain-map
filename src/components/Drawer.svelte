@@ -1,7 +1,7 @@
 <script lang="ts">
   import DetailsTab from './DetailsTab.svelte';
   import AbiTab from './AbiTab.svelte';
-  import { drawerOpen, selectedContractId, activeTab, closeDrawer } from '../lib/stores/selectedContract';
+  import { drawerOpen, selectedContractId, activeTab, closeDrawer } from '../lib/stores/ui';
   import { inventory } from '../lib/stores/inventory';
   import { UI_MESSAGES } from '../lib/constants';
   import { onMount } from 'svelte';

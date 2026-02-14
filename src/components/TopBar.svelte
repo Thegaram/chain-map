@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { filters } from '../lib/stores/filters';
+  import { filters } from '../lib/stores/viewState';
   import { settings } from '../lib/stores/settings';
   import { chains } from '../lib/stores/chains';
   import { inventory } from '../lib/stores/inventory';

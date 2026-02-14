@@ -6,7 +6,7 @@
   import Toast from './components/Toast.svelte';
   import { inventory } from './lib/stores/inventory';
   import { isDirty, restoreLastFile } from './lib/stores/persistence';
-  import { drawerOpen } from './lib/stores/selectedContract';
+  import { drawerOpen } from './lib/stores/ui';
   import { handleKeydown } from './lib/keyboardShortcuts';
   import { onMount } from 'svelte';
 

@@ -4,7 +4,7 @@
   import { chains } from '../lib/stores/chains';
   import { validateContractForm, parseTags } from '../lib/validation';
   import type { ContractRecord, ContractType } from '../lib/types';
-  import { fetchMissingData } from '../lib/chain/autoFetch';
+  import { fetchMissingData } from '../lib/onchain';
   import { get } from 'svelte/store';
   import { saveIfDirty } from '../lib/stores/persistence';
 

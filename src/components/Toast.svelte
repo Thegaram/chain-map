@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { toast } from '../lib/stores/toast';
-  import type { Toast as ToastType } from '../lib/stores/toast';
+  import { toast, toastList } from '../lib/stores/ui';
 
   function getIcon(type?: string) {
     switch (type) {
@@ -13,7 +12,7 @@
 </script>
 
 <div class="toast-container">
-  {#each $toast as item (item.id)}
+  {#each $toastList as item (item.id)}
     <div class="toast toast-{item.type || 'success'}" on:click={() => toast.dismiss(item.id)}>
       <span class="toast-icon">{getIcon(item.type)}</span>
       <span class="toast-message">{item.message}</span>

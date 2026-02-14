@@ -1,16 +1,16 @@
 <script lang="ts">
   import { inventory } from '../lib/stores/inventory';
-  import { selectedContractId, closeDrawer, openDrawer } from '../lib/stores/selectedContract';
+  import { selectedContractId, closeDrawer, openDrawer } from '../lib/stores/ui';
   import { chains, chainMap } from '../lib/stores/chains';
   import { parseTags } from '../lib/validation';
   import { UI_MESSAGES } from '../lib/constants';
-  import { getBytecodeInfo, formatBytecodeSize } from '../lib/chain/bytecode';
-  import { detectProxy, formatProxyType } from '../lib/chain/proxy';
+  import { getBytecodeInfo, formatBytecodeSize } from '../lib/onchain';
+  import { detectProxy, formatProxyType } from '../lib/onchain';
   import { getExplorerAddressUrl } from '../lib/links';
   import type { ContractType, ContractRecord } from '../lib/types';
   import type { Address } from 'viem';
   import { onMount, tick } from 'svelte';
-  import { toast } from '../lib/stores/toast';
+  import { toast } from '../lib/stores/ui';
   import Skeleton from './Skeleton.svelte';
   import { saveIfDirty } from '../lib/stores/persistence';
 

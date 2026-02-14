@@ -1,6 +1,6 @@
 <script lang="ts">
   import { allTags } from '../lib/stores/inventory';
-  import { filters } from '../lib/stores/filters';
+  import { filters } from '../lib/stores/viewState';
 
   let tagButtons: { [key: string]: HTMLButtonElement } = {};
   let focusedTagIndex = -1;

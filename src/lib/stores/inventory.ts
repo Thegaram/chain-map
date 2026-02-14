@@ -1,26 +1,34 @@
+/**
+ * Inventory store with built-in undo/redo
+ */
+
 import { writable, derived, get } from 'svelte/store';
 import type { ContractRecord } from '../types';
-import { history } from './history';
 
-/**
- * Main inventory store containing all contract records
- */
+const MAX_HISTORY = 50;
+
 function createInventoryStore() {
   const { subscribe, set, update } = writable<ContractRecord[]>([]);
 
-  // Helper to record state before changes
+  // History state
+  let past: ContractRecord[][] = [];
+  let future: ContractRecord[][] = [];
+
   function recordBeforeChange() {
     const currentState = get({ subscribe });
-    history.recordState([...currentState]); // Deep copy
+    past = [...past, currentState].slice(-MAX_HISTORY);
+    future = []; // Clear future when new action is taken
+  }
+
+  function clearHistory() {
+    past = [];
+    future = [];
   }
 
   return {
     subscribe,
     set,
 
-    /**
-     * Add a new contract to the inventory
-     */
     addContract: (contract: Omit<ContractRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
       recordBeforeChange();
 
@@ -35,9 +43,6 @@ function createInventoryStore() {
       return newContract;
     },
 
-    /**
-     * Update an existing contract
-     */
     updateContract: (id: string, updates: Partial<Omit<ContractRecord, 'id' | 'createdAt'>>) => {
       recordBeforeChange();
 
@@ -50,80 +55,58 @@ function createInventoryStore() {
       );
     },
 
-    /**
-     * Remove a contract from the inventory
-     */
     deleteContract: (id: string) => {
       recordBeforeChange();
       update(contracts => contracts.filter(c => c.id !== id));
     },
 
-    /**
-     * Get a contract by ID
-     */
     getContract: (id: string): ContractRecord | undefined => {
       return get({ subscribe }).find(c => c.id === id);
     },
 
-    /**
-     * Clear all contracts
-     */
     clear: () => {
       recordBeforeChange();
       set([]);
     },
 
-    /**
-     * Load contracts from data
-     */
     load: (contracts: ContractRecord[]) => {
       set(contracts);
-      history.init();
+      clearHistory();
     },
 
-    /**
-     * Undo the last change
-     */
     undo: (): boolean => {
+      if (past.length === 0) return false;
+
       const currentState = get({ subscribe });
-      const previousState = history.undo(currentState);
-      if (previousState) {
-        set(previousState);
-        return true;
-      }
-      return false;
+      const previousState = past[past.length - 1];
+
+      past = past.slice(0, -1);
+      future = [currentState, ...future];
+
+      set(previousState);
+      return true;
     },
 
-    /**
-     * Redo the last undone change
-     */
     redo: (): boolean => {
+      if (future.length === 0) return false;
+
       const currentState = get({ subscribe });
-      const nextState = history.redo(currentState);
-      if (nextState) {
-        set(nextState);
-        return true;
-      }
-      return false;
+      const nextState = future[0];
+
+      past = [...past, currentState];
+      future = future.slice(1);
+
+      set(nextState);
+      return true;
     },
 
-    /**
-     * Check if undo is available
-     */
-    canUndo: () => history.canUndo(),
-
-    /**
-     * Check if redo is available
-     */
-    canRedo: () => history.canRedo(),
+    canUndo: () => past.length > 0,
+    canRedo: () => future.length > 0,
   };
 }
 
 export const inventory = createInventoryStore();
 
-/**
- * Derived store for all unique tags across contracts
- */
 export const allTags = derived(
   inventory,
   $inventory => {
