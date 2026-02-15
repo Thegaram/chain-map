@@ -60,10 +60,11 @@
     loading = true;
 
     try {
-      // Handle relative URLs by making them absolute
-      const url = example.url.startsWith('/')
-        ? `${window.location.origin}${example.url}`
-        : example.url;
+      // Resolve relative to current URL, ensuring trailing slash for proper resolution
+      const base = window.location.href.endsWith('/')
+        ? window.location.href
+        : window.location.href + '/';
+      const url = new URL(example.url, base).href;
       await loadInventoryFromUrl(url);
       resetForm();
       onClose();

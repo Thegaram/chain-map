@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { execSync } from 'child_process';
 
@@ -11,8 +11,27 @@ function getGitCommitHash() {
   }
 }
 
+// Plugin to redirect base path without trailing slash to with trailing slash
+// Mirrors GitHub Pages behavior in development
+function basePathRedirect(): Plugin {
+  return {
+    name: 'base-path-redirect',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        // Redirect /chain-map to /chain-map/
+        if (req.url === '/chain-map') {
+          res.writeHead(301, { Location: '/chain-map/' });
+          res.end();
+          return;
+        }
+        next();
+      });
+    }
+  };
+}
+
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [svelte(), basePathRedirect()],
   base: '/chain-map/',
   build: {
     outDir: 'dist'
