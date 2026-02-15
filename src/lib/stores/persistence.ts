@@ -6,7 +6,7 @@ import { writable, derived, get } from 'svelte/store';
 import { inventory } from './inventory';
 import { chains } from './chains';
 import { settings } from './settings';
-import { saveFile, loadFile, loadFromHandle, verifyPermission, serializeInventory, deserializeInventory, storeFileHandle, retrieveFileHandle, clearFileHandle } from '../storage';
+import { saveFile, loadFile, loadFromHandle, verifyPermission, serializeInventory, deserializeInventory, storeFileHandle, retrieveFileHandle, clearFileHandle, storeSourceUrl, retrieveSourceUrl, clearSourceUrl } from '../storage';
 import { FILE_CONFIG, UI_MESSAGES } from '../constants';
 import { fetchMissingDataBatch } from '../onchain';
 
@@ -36,6 +36,16 @@ export const lastSaved = writable<number | null>(null);
 export const isSaving = writable<boolean>(false);
 
 /**
+ * Source URL (for read-only remote inventories)
+ */
+export const sourceUrl = writable<string | null>(null);
+
+/**
+ * Read-only mode - true when inventory was loaded from URL
+ */
+export const isReadOnly = derived(sourceUrl, ($sourceUrl) => $sourceUrl !== null);
+
+/**
  * Loading file flag (store to share state across hot-reload instances)
  */
 const isLoadingFile = writable<boolean>(false);
@@ -63,6 +73,12 @@ export async function saveInventory(saveAs: boolean = false): Promise<boolean> {
   try {
     const currentHandle = get(fileHandle);
     const currentFileName = get(fileName);
+    const currentSourceUrl = get(sourceUrl);
+
+    // Prevent regular save in read-only mode
+    if (!saveAs && currentSourceUrl !== null) {
+      throw new Error('Cannot save to URL. Use Save As to create a local copy.');
+    }
 
     // Serialize current state
     const json = serializeInventory(
@@ -86,6 +102,12 @@ export async function saveInventory(saveAs: boolean = false): Promise<boolean> {
       fileName.set(handle.name);
       isDirty.set(false);
       lastSaved.set(Date.now());
+
+      // Exit read-only mode when doing Save As
+      if (saveAs && currentSourceUrl !== null) {
+        sourceUrl.set(null);
+        await clearSourceUrl();
+      }
 
       // Store handle in IndexedDB for persistence across refreshes
       await storeFileHandle(handle);
@@ -112,7 +134,8 @@ export async function saveInventory(saveAs: boolean = false): Promise<boolean> {
  * Save inventory immediately if there are unsaved changes
  */
 export async function saveIfDirty(): Promise<void> {
-  if (get(isDirty) && get(fileHandle)) {
+  // Don't auto-save in read-only mode
+  if (get(isDirty) && get(fileHandle) && get(sourceUrl) === null) {
     await saveInventory(false);
   }
 }
@@ -144,6 +167,10 @@ export async function loadInventory(): Promise<boolean> {
       inventory.load(data.contracts);
       chains.load(data.chains);
       settings.update(s => ({ ...s, ...data.settings }));
+
+      // Clear read-only mode (loading local file)
+      sourceUrl.set(null);
+      await clearSourceUrl();
 
       // Update file state
       if (result.handle) {
@@ -180,10 +207,119 @@ export async function loadInventory(): Promise<boolean> {
 }
 
 /**
+ * Load inventory from URL (read-only mode)
+ */
+export async function loadInventoryFromUrl(url: string): Promise<void> {
+  // Validate HTTPS (allow HTTP for localhost/127.0.0.1)
+  const isLocalhost = url.includes('localhost') || url.includes('127.0.0.1');
+  if (!url.startsWith('https://') && !url.startsWith('http://')) {
+    throw new Error('URL must use HTTP or HTTPS protocol');
+  }
+  if (!isLocalhost && !url.startsWith('https://')) {
+    throw new Error('Remote URLs must use HTTPS protocol');
+  }
+
+  // Fetch with timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const content = await response.text();
+
+    // Deserialize and validate
+    const data = deserializeInventory(content);
+
+    // Set loading flag to prevent marking dirty during load
+    isLoadingFile.set(true);
+
+    try {
+      // Clear file handle (we're loading from URL now)
+      await clearFileHandle();
+
+      // Update persistence state BEFORE loading data
+      isDirty.set(false);
+      lastSaved.set(null);
+
+      // Load into stores
+      inventory.load(data.contracts);
+      chains.load(data.chains);
+      settings.update(s => ({ ...s, ...data.settings }));
+
+      // Extract filename from URL
+      const urlPath = new URL(url).pathname;
+      const extractedFileName = urlPath.split('/').pop() || 'inventory.json';
+
+      // Set read-only mode
+      fileHandle.set(null);
+      fileName.set(extractedFileName);
+      sourceUrl.set(url);
+
+      // Store URL in IndexedDB for session persistence
+      await storeSourceUrl(url);
+
+      // Mark as loaded
+      lastSaved.set(Date.now());
+    } finally {
+      // Always clear loading flag
+      isLoadingFile.set(false);
+    }
+
+    // Auto-fetch missing on-chain data in background
+    fetchMissingDataBatch(
+      get(inventory),
+      (id, updates) => inventory.updateContract(id, updates)
+    ).catch(err => console.error('Auto-fetch failed:', err));
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+
+    // Handle specific error types
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Check the URL and try again.');
+    }
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('CORS')) {
+      throw new Error('URL blocked by CORS policy. Use a CORS-enabled endpoint.');
+    }
+
+    // Re-throw other errors
+    throw error;
+  } finally {
+    isLoadingFile.set(false);
+  }
+}
+
+/**
  * Restore last opened file on app start
  */
 export async function restoreLastFile(): Promise<boolean> {
   try {
+    // Check for stored URL first
+    const storedUrl = await retrieveSourceUrl();
+    if (storedUrl) {
+      try {
+        await loadInventoryFromUrl(storedUrl);
+        return true;
+      } catch (error) {
+        console.error('Failed to restore from URL, clearing:', error);
+        await clearSourceUrl();
+        // Fall through to try file handle
+      }
+    }
+
+    // Fall back to file handle restoration
     const handle = await retrieveFileHandle();
 
     if (!handle) {
@@ -260,9 +396,11 @@ export async function newInventory(): Promise<void> {
   fileName.set(FILE_CONFIG.DEFAULT_NAME);
   isDirty.set(false);
   lastSaved.set(null);
+  sourceUrl.set(null);
 
-  // Clear stored file handle
+  // Clear stored file handle and URL
   await clearFileHandle();
+  await clearSourceUrl();
 
   // Now safe to clear inventory (won't be marked as dirty)
   inventory.clear();
@@ -293,11 +431,44 @@ export function exportInventory(): void {
  * Derived store: Display name for current file
  */
 export const displayFileName = derived(
-  [fileName, isDirty, isSaving],
-  ([$fileName, $isDirty, $isSaving]) => {
+  [fileName, isSaving, isReadOnly, fileHandle],
+  ([$fileName, $isSaving, $isReadOnly, $fileHandle]) => {
     if ($isSaving) {
       return `${$fileName} (saving...)`;
     }
-    return $isDirty ? `${$fileName} *` : $fileName;
+
+    if ($isReadOnly) {
+      return `${$fileName} (remote file, read-only)`;
+    }
+
+    if ($fileHandle) {
+      return `${$fileName} (local file, read-write)`;
+    }
+
+    // No file loaded yet
+    return $fileName;
+  }
+);
+
+/**
+ * Derived store: File status parts (name and status separately for styling)
+ */
+export const fileStatus = derived(
+  [fileName, isSaving, isReadOnly, fileHandle],
+  ([$fileName, $isSaving, $isReadOnly, $fileHandle]) => {
+    if ($isSaving) {
+      return { name: $fileName, status: '(saving...)' };
+    }
+
+    if ($isReadOnly) {
+      return { name: $fileName, status: '(remote file, read-only)' };
+    }
+
+    if ($fileHandle) {
+      return { name: $fileName, status: '(local file, read-write)' };
+    }
+
+    // No file loaded yet
+    return { name: $fileName, status: null };
   }
 );

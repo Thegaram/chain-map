@@ -2,9 +2,11 @@
   import { saveInventory, loadInventory, newInventory, isDirty } from '../lib/stores/persistence';
   import { toast } from '../lib/stores/ui';
   import KeyboardHints from './KeyboardHints.svelte';
+  import LoadFromUrlModal from './LoadFromUrlModal.svelte';
 
   let showMenu = false;
   let showKeyboardHints = false;
+  let showUrlModal = false;
   let isLoading = false;
 
   function toggleMenu() {
@@ -36,6 +38,11 @@
     } finally {
       isLoading = false;
     }
+  }
+
+  function handleOpenFromUrl() {
+    closeMenu();
+    showUrlModal = true;
   }
 
   async function handleSave() {
@@ -89,6 +96,9 @@
         <span>Open...</span>
         <span class="shortcut">⌘O</span>
       </button>
+      <button class="menu-item" on:click={handleOpenFromUrl}>
+        <span>Open from URL...</span>
+      </button>
       <button class="menu-item" on:click={handleSave} disabled={!$isDirty}>
         <span>Save</span>
         <span class="shortcut">⌘S</span>
@@ -108,6 +118,7 @@
 </div>
 
 <KeyboardHints bind:open={showKeyboardHints} />
+<LoadFromUrlModal open={showUrlModal} onClose={() => showUrlModal = false} />
 
 <style>
   .actions-menu-container {

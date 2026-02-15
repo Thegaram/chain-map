@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "settings": {
+    "theme": "light"
+  },
+  "chains": [
+    {
+      "chainId": 1,
+      "name": "Ethereum Mainnet",
+      "shortName": "ETH",
+      "rpcUrls": [
+        "https://eth.llamarpc.com",
+        "https://rpc.ankr.com/eth"
+      ],
+      "explorerUrl": "https://etherscan.io",
+      "explorerApiUrl": "https://api.etherscan.io/v2/api"
+    },
+    {
+      "chainId": 534352,
+      "name": "Scroll",
+      "shortName": "Scroll",
+      "rpcUrls": [
+        "https://rpc.scroll.io",
+        "https://scroll.drpc.org"
+      ],
+      "explorerUrl": "https://scrollscan.com",
+      "explorerApiUrl": "https://api.scrollscan.com/api"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "scroll-bridge-l1",
+      "label": "Scroll Bridge (L1)",
+      "address": "0x6774Bcbd5ceCeF1336b5300fb5186a12DDD8b367",
+      "chainId": 1,
+      "type": "proxy",
+      "tags": ["bridge", "l1", "core"],
+      "source": "scroll-tech/scroll-contracts@v0.1.0",
+      "notes": "Main bridge contract on Ethereum for Scroll L2",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    {
+      "id": "scroll-messenger-l1",
+      "label": "L1 Scroll Messenger",
+      "address": "0x6774Bcbd5ceCeF1336b5300fb5186a12DDD8b367",
+      "chainId": 1,
+      "type": "implementation",
+      "tags": ["messaging", "l1", "core"],
+      "source": "scroll-tech/scroll-contracts@v0.1.0",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    {
+      "id": "scroll-bridge-l2",
+      "label": "Scroll Bridge (L2)",
+      "address": "0x781e90f1c8Fc4611c9b7497C3B47F99Ef6969CbC",
+      "chainId": 534352,
+      "type": "proxy",
+      "tags": ["bridge", "l2", "core"],
+      "source": "scroll-tech/scroll-contracts@v0.1.0",
+      "notes": "Main bridge contract on Scroll L2",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    {
+      "id": "scroll-messenger-l2",
+      "label": "L2 Scroll Messenger",
+      "address": "0x781e90f1c8Fc4611c9b7497C3B47F99Ef6969CbC",
+      "chainId": 534352,
+      "type": "implementation",
+      "tags": ["messaging", "l2", "core"],
+      "source": "scroll-tech/scroll-contracts@v0.1.0",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    }
+  ]
+}

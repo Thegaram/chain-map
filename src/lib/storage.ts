@@ -209,10 +209,10 @@ export async function loadFromHandle(handle: FileSystemFileHandle): Promise<stri
 }
 
 // ============================================================================
-// IndexedDB for File Handles
+// IndexedDB for File Handles and Source URLs
 // ============================================================================
 
-const { NAME: DB_NAME, STORE_NAME, HANDLE_KEY } = DB_CONFIG;
+const { NAME: DB_NAME, STORE_NAME, HANDLE_KEY, URL_KEY, URL_TIMESTAMP_KEY } = DB_CONFIG;
 
 async function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -281,5 +281,85 @@ export async function clearFileHandle(): Promise<void> {
     db.close();
   } catch (error) {
     console.error('Failed to clear file handle:', error);
+  }
+}
+
+// ============================================================================
+// IndexedDB for Source URLs
+// ============================================================================
+
+export async function storeSourceUrl(url: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    await new Promise<void>((resolve, reject) => {
+      const urlRequest = store.put(url, URL_KEY);
+      const timestampRequest = store.put(Date.now(), URL_TIMESTAMP_KEY);
+
+      let completed = 0;
+      const checkComplete = () => {
+        completed++;
+        if (completed === 2) resolve();
+      };
+
+      urlRequest.onsuccess = checkComplete;
+      timestampRequest.onsuccess = checkComplete;
+      urlRequest.onerror = () => reject(urlRequest.error);
+      timestampRequest.onerror = () => reject(timestampRequest.error);
+    });
+
+    db.close();
+  } catch (error) {
+    console.error('Failed to store source URL:', error);
+  }
+}
+
+export async function retrieveSourceUrl(): Promise<string | null> {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+
+    const url = await new Promise<string | null>((resolve, reject) => {
+      const request = store.get(URL_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
+    return url;
+  } catch (error) {
+    console.error('Failed to retrieve source URL:', error);
+    return null;
+  }
+}
+
+export async function clearSourceUrl(): Promise<void> {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    await new Promise<void>((resolve, reject) => {
+      const urlRequest = store.delete(URL_KEY);
+      const timestampRequest = store.delete(URL_TIMESTAMP_KEY);
+
+      let completed = 0;
+      const checkComplete = () => {
+        completed++;
+        if (completed === 2) resolve();
+      };
+
+      urlRequest.onsuccess = checkComplete;
+      timestampRequest.onsuccess = checkComplete;
+      urlRequest.onerror = () => reject(urlRequest.error);
+      timestampRequest.onerror = () => reject(timestampRequest.error);
+    });
+
+    db.close();
+  } catch (error) {
+    console.error('Failed to clear source URL:', error);
   }
 }

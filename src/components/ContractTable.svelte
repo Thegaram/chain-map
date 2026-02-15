@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { sortedContracts, sort } from '../lib/stores/viewState';
+  import { sortedContracts, sort, filters } from '../lib/stores/viewState';
   import type { SortField } from '../lib/stores/viewState';
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer, selectedContractId } from '../lib/stores/ui';
@@ -101,6 +101,16 @@
     { label: 'Duplicate', icon: '📄', action: 'duplicate' },
     { label: 'Delete', icon: '🗑️', action: 'delete', danger: true },
   ] as MenuItem[] : [];
+
+  // Check if inventory is truly empty (no contracts at all)
+  $: isTrulyEmpty = $inventory.length === 0;
+
+  // Check if filters are active
+  $: hasActiveFilters =
+    $filters.searchQuery !== '' ||
+    $filters.selectedChain !== 'all' ||
+    $filters.selectedType !== 'all' ||
+    $filters.selectedTags.length > 0;
 </script>
 
 <div class="table-container">
@@ -184,8 +194,28 @@
 
   {#if $sortedContracts.length === 0}
     <div class="empty-state">
-      <p>No contracts found</p>
-      <p class="empty-hint">Press + to add a contract or adjust filters</p>
+      {#if isTrulyEmpty}
+        <div class="empty-icon">📦</div>
+        <h3 class="empty-title">Welcome to Contract Inventory</h3>
+        <p class="empty-description">
+          Your inventory is empty. Get started by:
+        </p>
+        <div class="empty-actions">
+          <div class="empty-action-item">
+            <span class="action-key">N</span>
+            <span>Add a new contract</span>
+          </div>
+          <div class="empty-action-item">
+            <span class="action-icon">⋮</span>
+            <span>Browse existing inventories from the menu</span>
+          </div>
+        </div>
+      {:else}
+        <p>No contracts found</p>
+        <p class="empty-hint">
+          {hasActiveFilters ? 'Try adjusting filters or search terms' : 'Press N to add a contract'}
+        </p>
+      {/if}
     </div>
   {/if}
 </div>
@@ -339,8 +369,79 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 300px;
+    min-height: 400px;
+    padding: var(--space-xl);
     color: var(--text-tertiary);
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+  }
+
+  .empty-title {
+    margin: 0 0 var(--space-sm) 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .empty-description {
+    margin: 0 0 var(--space-lg) 0;
+    font-size: var(--font-size-md);
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .empty-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    min-width: 400px;
+  }
+
+  .empty-action-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  .action-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 var(--space-sm);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 
   .empty-hint {

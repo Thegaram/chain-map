@@ -3,7 +3,7 @@
   import { settings } from '../lib/stores/settings';
   import { chains } from '../lib/stores/chains';
   import { inventory } from '../lib/stores/inventory';
-  import { saveInventory, loadInventory, isDirty, displayFileName, saveIfDirty } from '../lib/stores/persistence';
+  import { saveInventory, loadInventory, isDirty, fileStatus, saveIfDirty, isReadOnly } from '../lib/stores/persistence';
   import { contractFormOpen, contractFormInitialAddress, openContractForm, closeContractForm } from '../lib/stores/ui';
   import ContractFormModal from './ContractFormModal.svelte';
   import ActionsMenu from './ActionsMenu.svelte';
@@ -50,7 +50,7 @@
         key: SHORTCUTS.SAVE,
         ctrl: true,
         handler: async () => {
-          if ($isDirty) {
+          if ($isDirty && !$isReadOnly) {
             await saveInventory(false);
           }
         },
@@ -149,7 +149,10 @@
   </div>
 
   <div class="top-bar-section file-status">
-    <span class="file-name">{$displayFileName}</span>
+    <span class="file-name-bold">{$fileStatus.name}</span>
+    {#if $fileStatus.status}
+      <span class="file-status-text">{$fileStatus.status}</span>
+    {/if}
     {#if $isDirty}
       <span class="unsaved-indicator" title="Unsaved changes">●</span>
     {/if}
@@ -251,8 +254,15 @@
     font-size: var(--font-size-xs);
   }
 
-  .file-name {
+  .file-name-bold {
     opacity: 0.7;
+    font-weight: 600;
+  }
+
+  .file-status-text {
+    opacity: 0.7;
+    font-weight: 400;
+    margin-left: var(--space-xs);
   }
 
   .unsaved-indicator {

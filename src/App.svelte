@@ -4,6 +4,7 @@
   import ContractTable from './components/ContractTable.svelte';
   import Drawer from './components/Drawer.svelte';
   import Toast from './components/Toast.svelte';
+  import CommitHash from './components/CommitHash.svelte';
   import { inventory } from './lib/stores/inventory';
   import { isDirty, restoreLastFile } from './lib/stores/persistence';
   import { drawerOpen } from './lib/stores/ui';
@@ -18,40 +19,9 @@
     }
   }
 
-  // Restore last opened file or add sample data
+  // Restore last opened file on app startup
   onMount(async () => {
-    // Try to restore last opened file
-    const restored = await restoreLastFile();
-
-    // If no file was restored and inventory is empty, add sample data
-    if (!restored && $inventory.length === 0) {
-      inventory.addContract({
-        label: 'USDC Token',
-        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        chainId: 1,
-        type: 'implementation',
-        tags: ['token', 'stablecoin', 'production'],
-        source: 'https://github.com/centre-tokens/centre-tokens',
-      });
-
-      inventory.addContract({
-        label: 'Scroll Bridge Proxy',
-        address: '0x6774Bcbd5ceCeF1336b5300fb5186a12DDD8b367',
-        chainId: 534352,
-        type: 'proxy',
-        tags: ['bridge', 'infrastructure'],
-        source: 'https://github.com/scroll-tech/scroll-contracts',
-      });
-
-      inventory.addContract({
-        label: 'Uniswap V3 Router',
-        address: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
-        chainId: 1,
-        type: 'implementation',
-        tags: ['defi', 'router', 'production'],
-        source: 'https://github.com/Uniswap/v3-periphery',
-      });
-    }
+    await restoreLastFile();
   });
 </script>
 
@@ -70,6 +40,7 @@
 </div>
 
 <Toast />
+<CommitHash />
 
 <style>
   .app-container {

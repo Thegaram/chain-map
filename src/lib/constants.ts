@@ -18,7 +18,9 @@ export const FILE_CONFIG = {
 export const DB_CONFIG = {
   NAME: 'contract-inventory-db',
   STORE_NAME: 'file-handles',
-  HANDLE_KEY: 'current-file-handle'
+  HANDLE_KEY: 'current-file-handle',
+  URL_KEY: 'source-url',
+  URL_TIMESTAMP_KEY: 'source-url-timestamp'
 } as const;
 
 // Validation patterns
@@ -74,4 +76,30 @@ export const STATUS_ICONS = {
 export const THEME_ICONS = {
   LIGHT: '◐',
   DARK: '◑'
+} as const;
+
+// 3rd-party inventory examples for URL loading
+export interface InventoryExample {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  tags: string[];
+}
+
+export const INVENTORY_EXAMPLES: InventoryExample[] = [
+  {
+    id: 'scroll-core',
+    name: 'Scroll Core Contracts',
+    description: 'Essential Scroll L2 infrastructure contracts including bridges and messengers on Ethereum and Scroll',
+    url: '/examples/scroll-core.json',
+    tags: ['Scroll', 'L2', 'Bridge', 'Infrastructure']
+  }
+];
+
+// Read-only mode messages
+export const READ_ONLY_MESSAGES = {
+  CANNOT_SAVE: 'Cannot save to URL. Use Save As to create a local copy.',
+  LOADED_FROM_URL: 'Inventory loaded from URL (read-only mode)',
+  SAVE_AS_TO_EDIT: 'Changes will be lost on reload. Use Save As to create an editable local copy.'
 } as const;
