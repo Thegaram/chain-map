@@ -1,15 +1,30 @@
 <script lang="ts">
-  import { selectedContractId, toast, openDrawer, openContractForm, closeDrawer } from '../lib/stores/ui';
+  import {
+    selectedContractId,
+    toast,
+    openDrawer,
+    openContractForm,
+    closeDrawer
+  } from '../lib/stores/ui';
   import { inventory } from '../lib/stores/inventory';
   import { chains, chainMap } from '../lib/stores/chains';
   import { fetchAbiSmart } from '../lib/explorer';
-  import { parseViewFunctions, callViewFunction, formatResult, formatFunctionSignature, getReturnType, extractAddresses, requiresInput, type AbiFunction } from '../lib/abi';
+  import {
+    parseViewFunctions,
+    callViewFunction,
+    formatResult,
+    formatFunctionSignature,
+    getReturnType,
+    extractAddresses,
+    requiresInput,
+    type AbiFunction
+  } from '../lib/abi';
   import { createAddressLink } from '../lib/addressLink';
   import { saveIfDirty } from '../lib/stores/persistence';
   import type { Address } from 'viem';
   import Skeleton from './Skeleton.svelte';
 
-  $: contract = $selectedContractId ? $inventory.find(c => c.id === $selectedContractId) : null;
+  $: contract = $selectedContractId ? $inventory.find((c) => c.id === $selectedContractId) : null;
   $: chain = contract ? $chainMap.get(contract.chainId) : null;
   $: hasAbi = contract?.abi && contract.abi.length > 0;
   $: viewFunctions = hasAbi ? parseViewFunctions(contract!.abi!) : [];
@@ -36,11 +51,7 @@
     abiError = null;
 
     try {
-      const result = await fetchAbiSmart(
-        contract.address,
-        chain,
-        contract.implementation
-      );
+      const result = await fetchAbiSmart(contract.address, chain, contract.implementation);
 
       if (result) {
         inventory.updateContract(contract.id, {
@@ -87,7 +98,7 @@
     if (!contract || !hasAbi) return;
 
     // Call all view functions with no parameters
-    const noParamFunctions = viewFunctions.filter(f => !requiresInput(f));
+    const noParamFunctions = viewFunctions.filter((f) => !requiresInput(f));
 
     for (const func of noParamFunctions) {
       // Skip if we have a recent cached result (less than 5 minutes old)
@@ -340,7 +351,7 @@
             <button class="btn btn-primary" on:click={saveApiKey} disabled={!apiKeyInput.trim()}>
               Save API Key
             </button>
-            <button class="btn btn-secondary" on:click={() => showApiKeyInput = false}>
+            <button class="btn btn-secondary" on:click={() => (showApiKeyInput = false)}>
               Cancel
             </button>
           </div>

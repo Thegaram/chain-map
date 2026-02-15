@@ -18,7 +18,7 @@
   // Make contract reactive to inventory changes
   let contract: ContractRecord | null = null;
   $: if ($selectedContractId) {
-    contract = $inventory.find(c => c.id === $selectedContractId) || null;
+    contract = $inventory.find((c) => c.id === $selectedContractId) || null;
   } else {
     contract = null;
   }
@@ -57,7 +57,10 @@
     }, 2000);
   }
 
-  async function saveField(field: string, updates: Partial<Omit<ContractRecord, 'id' | 'createdAt'>>) {
+  async function saveField(
+    field: string,
+    updates: Partial<Omit<ContractRecord, 'id' | 'createdAt'>>
+  ) {
     if (!contract) return;
     inventory.updateContract(contract.id, updates);
     await saveIfDirty();
@@ -110,10 +113,7 @@
     error = null;
 
     try {
-      const bytecodeInfo = await getBytecodeInfo(
-        contract.address as Address,
-        contract.chainId
-      );
+      const bytecodeInfo = await getBytecodeInfo(contract.address as Address, contract.chainId);
 
       if (bytecodeInfo.isEmpty) {
         error = 'No bytecode found at this address';
@@ -139,10 +139,7 @@
     loadingProxy = true;
 
     try {
-      const proxyInfo = await detectProxy(
-        contract.address as Address,
-        contract.chainId
-      );
+      const proxyInfo = await detectProxy(contract.address as Address, contract.chainId);
 
       // Auto-detect type based on proxy detection
       const detectedType: ContractType = proxyInfo.isProxy ? 'proxy' : 'implementation';
@@ -176,7 +173,13 @@
           <span class="saved-indicator">✓</span>
         {/if}
       </div>
-      <input id="label" type="text" bind:value={editedLabel} on:blur={handleLabelBlur} bind:this={labelInput} />
+      <input
+        id="label"
+        type="text"
+        bind:value={editedLabel}
+        on:blur={handleLabelBlur}
+        bind:this={labelInput}
+      />
     </div>
 
     <div class="field-group">
@@ -223,7 +226,13 @@
           <span class="saved-indicator">✓</span>
         {/if}
       </div>
-      <input id="source" type="text" bind:value={editedSource} on:blur={handleSourceBlur} placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL" />
+      <input
+        id="source"
+        type="text"
+        bind:value={editedSource}
+        on:blur={handleSourceBlur}
+        placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL"
+      />
     </div>
 
     <div class="divider"></div>
@@ -253,7 +262,11 @@
           {#if loadingBytecode}
             <Skeleton width="100%" height="1.2rem" />
           {:else if contract.codehash}
-            <code class="info-value clickable" on:click={() => copyToClipboard(contract.codehash!, 'Codehash')} title="Click to copy">
+            <code
+              class="info-value clickable"
+              on:click={() => copyToClipboard(contract.codehash!, 'Codehash')}
+              title="Click to copy"
+            >
               {contract.codehash}
             </code>
           {:else}
@@ -313,7 +326,11 @@
             </div>
             {#if link.type === 'inventory'}
               <div>
-                <button class="implementation-link" on:click={handleImplementationClick} title="Open {link.label}">
+                <button
+                  class="implementation-link"
+                  on:click={handleImplementationClick}
+                  title="Open {link.label}"
+                >
                   {contract.implementation} → {link.label}
                 </button>
               </div>
@@ -395,8 +412,14 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   input[readonly] {

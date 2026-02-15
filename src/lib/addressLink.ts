@@ -27,9 +27,7 @@ export function createAddressLink(
   const normalizedAddress = address.toLowerCase();
 
   // Check if address exists in inventory
-  const contract = inventory.find(
-    (c) => c.address.toLowerCase() === normalizedAddress
-  );
+  const contract = inventory.find((c) => c.address.toLowerCase() === normalizedAddress);
 
   if (contract) {
     return {

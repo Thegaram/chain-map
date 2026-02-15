@@ -78,9 +78,7 @@ export async function callViewFunction(
     }
 
     // Find the function in ABI to get output types
-    const funcAbi = abi.find(
-      (item) => item.type === 'function' && item.name === functionName
-    );
+    const funcAbi = abi.find((item) => item.type === 'function' && item.name === functionName);
 
     if (!funcAbi) {
       throw new Error(`Function ${functionName} not found in ABI`);
@@ -139,9 +137,7 @@ export function formatResult(value: any, type: string): string {
 
   // Handle objects (structs/tuples)
   if (typeof value === 'object') {
-    return JSON.stringify(value, (key, val) =>
-      typeof val === 'bigint' ? val.toString() : val
-    , 2);
+    return JSON.stringify(value, (key, val) => (typeof val === 'bigint' ? val.toString() : val), 2);
   }
 
   return String(value);
@@ -182,10 +178,12 @@ export function extractAddresses(value: any): string[] {
  * Format function signature for display
  */
 export function formatFunctionSignature(func: AbiFunction): string {
-  const inputs = func.inputs.map((input) => {
-    const name = input.name || '_';
-    return `${input.type} ${name}`;
-  }).join(', ');
+  const inputs = func.inputs
+    .map((input) => {
+      const name = input.name || '_';
+      return `${input.type} ${name}`;
+    })
+    .join(', ');
 
   return `${func.name}(${inputs})`;
 }

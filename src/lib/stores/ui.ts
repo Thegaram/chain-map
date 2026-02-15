@@ -29,18 +29,18 @@ const drawerHistory = writable<DrawerHistory>({
   currentIndex: -1
 });
 
-export const selectedContractId = derived(drawerState, $d => $d.contractId);
-export const drawerOpen = derived(drawerState, $d => $d.open);
-export const activeTab = derived(drawerState, $d => $d.tab);
+export const selectedContractId = derived(drawerState, ($d) => $d.contractId);
+export const drawerOpen = derived(drawerState, ($d) => $d.open);
+export const activeTab = derived(drawerState, ($d) => $d.tab);
 
-export const canGoBack = derived(drawerHistory, $h => $h.currentIndex > 0);
-export const canGoForward = derived(drawerHistory, $h => $h.currentIndex < $h.history.length - 1);
+export const canGoBack = derived(drawerHistory, ($h) => $h.currentIndex > 0);
+export const canGoForward = derived(drawerHistory, ($h) => $h.currentIndex < $h.history.length - 1);
 
 export function openDrawer(contractId: string, skipHistory = false) {
   drawerState.set({ open: true, contractId, tab: 'details' });
 
   if (!skipHistory) {
-    drawerHistory.update(h => {
+    drawerHistory.update((h) => {
       // If we're not at the end of history, truncate the future
       const newHistory = h.history.slice(0, h.currentIndex + 1);
       // Add new contract ID (avoid duplicates of the same contract in a row)
@@ -81,7 +81,7 @@ export function goForward() {
 }
 
 export function setActiveTab(tab: 'details' | 'abi') {
-  drawerState.update(d => ({ ...d, tab }));
+  drawerState.update((d) => ({ ...d, tab }));
 }
 
 // --- Keyboard Focus ---
@@ -103,14 +103,14 @@ export const keyboardFocus = {
     const contracts = get(sortedContracts);
     if (contracts.length === 0) return;
 
-    keyboardFocusIndex.update(index => {
+    keyboardFocusIndex.update((index) => {
       const newIndex = index + 1;
       return newIndex >= contracts.length ? contracts.length - 1 : newIndex;
     });
   },
 
   previous: () => {
-    keyboardFocusIndex.update(index => {
+    keyboardFocusIndex.update((index) => {
       const newIndex = index - 1;
       return newIndex < 0 ? 0 : newIndex;
     });
@@ -147,8 +147,8 @@ const contractFormState = writable<ContractFormState>({
   initialAddress: undefined
 });
 
-export const contractFormOpen = derived(contractFormState, $s => $s.open);
-export const contractFormInitialAddress = derived(contractFormState, $s => $s.initialAddress);
+export const contractFormOpen = derived(contractFormState, ($s) => $s.open);
+export const contractFormInitialAddress = derived(contractFormState, ($s) => $s.initialAddress);
 
 export function openContractForm(initialAddress?: string) {
   contractFormState.set({ open: true, initialAddress });
@@ -173,14 +173,14 @@ export const toastList = { subscribe: toasts.subscribe };
 export const toast = {
   show: (message: string, type: 'success' | 'error' | 'info' = 'success', duration = 2000) => {
     const id = crypto.randomUUID();
-    toasts.update(list => [...list, { id, message, type }]);
+    toasts.update((list) => [...list, { id, message, type }]);
 
     setTimeout(() => {
-      toasts.update(list => list.filter(t => t.id !== id));
+      toasts.update((list) => list.filter((t) => t.id !== id));
     }, duration);
   },
 
   dismiss: (id: string) => {
-    toasts.update(list => list.filter(t => t.id !== id));
+    toasts.update((list) => list.filter((t) => t.id !== id));
   }
 };

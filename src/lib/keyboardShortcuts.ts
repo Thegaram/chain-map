@@ -32,9 +32,7 @@ export function handleKeydown(event: KeyboardEvent) {
   // Don't trigger shortcuts when typing in inputs
   const target = event.target as HTMLElement;
   const isInInput =
-    target.tagName === 'INPUT' ||
-    target.tagName === 'TEXTAREA' ||
-    target.isContentEditable;
+    target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
   // Handle undo/redo (Cmd+Z / Cmd+Shift+Z)
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {

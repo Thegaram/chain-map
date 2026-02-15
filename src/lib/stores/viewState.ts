@@ -33,7 +33,7 @@ const initialState: ViewState = {
     searchQuery: '',
     selectedChain: 'all',
     selectedType: 'all',
-    selectedTags: [],
+    selectedTags: []
   },
   sort: {
     field: null,
@@ -50,24 +50,24 @@ function createViewStateStore() {
 
     // Filter actions
     setSearchQuery: (query: string) => {
-      update(s => ({ ...s, filters: { ...s.filters, searchQuery: query } }));
+      update((s) => ({ ...s, filters: { ...s.filters, searchQuery: query } }));
     },
 
     setChain: (chainId: number | 'all') => {
-      update(s => ({ ...s, filters: { ...s.filters, selectedChain: chainId } }));
+      update((s) => ({ ...s, filters: { ...s.filters, selectedChain: chainId } }));
     },
 
     setType: (type: ContractType | 'all') => {
-      update(s => ({ ...s, filters: { ...s.filters, selectedType: type } }));
+      update((s) => ({ ...s, filters: { ...s.filters, selectedType: type } }));
     },
 
     toggleTag: (tag: string) => {
-      update(s => ({
+      update((s) => ({
         ...s,
         filters: {
           ...s.filters,
           selectedTags: s.filters.selectedTags.includes(tag)
-            ? s.filters.selectedTags.filter(t => t !== tag)
+            ? s.filters.selectedTags.filter((t) => t !== tag)
             : [...s.filters.selectedTags, tag]
         }
       }));
@@ -75,16 +75,17 @@ function createViewStateStore() {
 
     // Sort actions
     toggleSort: (field: SortField) => {
-      update(s => ({
+      update((s) => ({
         ...s,
-        sort: s.sort.field === field
-          ? { field, direction: s.sort.direction === 'asc' ? 'desc' : 'asc' }
-          : { field, direction: 'asc' }
+        sort:
+          s.sort.field === field
+            ? { field, direction: s.sort.direction === 'asc' ? 'desc' : 'asc' }
+            : { field, direction: 'asc' }
       }));
     },
 
     // Reset
-    reset: () => update(() => initialState),
+    reset: () => update(() => initialState)
   };
 }
 
@@ -98,94 +99,87 @@ export const viewState = {
 
 // Convenience exports for backwards compatibility
 export const filters = {
-  subscribe: derived(store, $vs => $vs.filters).subscribe,
+  subscribe: derived(store, ($vs) => $vs.filters).subscribe,
   setSearchQuery: store.setSearchQuery,
   setChain: store.setChain,
   setType: store.setType,
-  toggleTag: store.toggleTag,
+  toggleTag: store.toggleTag
 };
 
 export const sort = {
-  subscribe: derived(store, $vs => $vs.sort).subscribe,
-  toggleSort: store.toggleSort,
+  subscribe: derived(store, ($vs) => $vs.sort).subscribe,
+  toggleSort: store.toggleSort
 };
 
 // Derived: filtered contracts
-const filteredContracts = derived(
-  [inventory, filters],
-  ([$inventory, $filters]) => {
-    let result = $inventory;
+const filteredContracts = derived([inventory, filters], ([$inventory, $filters]) => {
+  let result = $inventory;
 
-    // Filter by chain
-    if ($filters.selectedChain !== 'all') {
-      result = result.filter(c => c.chainId === $filters.selectedChain);
-    }
+  // Filter by chain
+  if ($filters.selectedChain !== 'all') {
+    result = result.filter((c) => c.chainId === $filters.selectedChain);
+  }
 
-    // Filter by type
-    if ($filters.selectedType !== 'all') {
-      result = result.filter(c => c.type === $filters.selectedType);
-    }
+  // Filter by type
+  if ($filters.selectedType !== 'all') {
+    result = result.filter((c) => c.type === $filters.selectedType);
+  }
 
-    // Filter by tags (AND logic)
-    if ($filters.selectedTags.length > 0) {
-      result = result.filter(c =>
-        $filters.selectedTags.every(tag => c.tags.includes(tag))
-      );
-    }
+  // Filter by tags (AND logic)
+  if ($filters.selectedTags.length > 0) {
+    result = result.filter((c) => $filters.selectedTags.every((tag) => c.tags.includes(tag)));
+  }
 
-    // Filter by search query
-    if ($filters.searchQuery.trim()) {
-      const query = $filters.searchQuery.toLowerCase();
-      result = result.filter(c =>
+  // Filter by search query
+  if ($filters.searchQuery.trim()) {
+    const query = $filters.searchQuery.toLowerCase();
+    result = result.filter(
+      (c) =>
         c.label.toLowerCase().includes(query) ||
         c.address.toLowerCase().includes(query) ||
         c.source?.toLowerCase().includes(query) ||
-        c.tags.some(tag => tag.toLowerCase().includes(query))
-      );
-    }
-
-    return result;
+        c.tags.some((tag) => tag.toLowerCase().includes(query))
+    );
   }
-);
+
+  return result;
+});
 
 // Derived: sorted and filtered contracts
-export const sortedContracts = derived(
-  [filteredContracts, sort],
-  ([$filtered, $sort]) => {
-    if (!$sort.field) return $filtered;
+export const sortedContracts = derived([filteredContracts, sort], ([$filtered, $sort]) => {
+  if (!$sort.field) return $filtered;
 
-    const contracts = [...$filtered];
-    const direction = $sort.direction === 'asc' ? 1 : -1;
+  const contracts = [...$filtered];
+  const direction = $sort.direction === 'asc' ? 1 : -1;
 
-    contracts.sort((a, b) => {
-      let aVal: any, bVal: any;
+  contracts.sort((a, b) => {
+    let aVal: any, bVal: any;
 
-      switch ($sort.field) {
-        case 'label':
-          aVal = a.label.toLowerCase();
-          bVal = b.label.toLowerCase();
-          break;
-        case 'chain':
-          aVal = a.chainId;
-          bVal = b.chainId;
-          break;
-        case 'type':
-          aVal = a.type;
-          bVal = b.type;
-          break;
-        case 'updatedAt':
-          aVal = a.updatedAt;
-          bVal = b.updatedAt;
-          break;
-        default:
-          return 0;
-      }
+    switch ($sort.field) {
+      case 'label':
+        aVal = a.label.toLowerCase();
+        bVal = b.label.toLowerCase();
+        break;
+      case 'chain':
+        aVal = a.chainId;
+        bVal = b.chainId;
+        break;
+      case 'type':
+        aVal = a.type;
+        bVal = b.type;
+        break;
+      case 'updatedAt':
+        aVal = a.updatedAt;
+        bVal = b.updatedAt;
+        break;
+      default:
+        return 0;
+    }
 
-      if (aVal < bVal) return -1 * direction;
-      if (aVal > bVal) return 1 * direction;
-      return 0;
-    });
+    if (aVal < bVal) return -1 * direction;
+    if (aVal > bVal) return 1 * direction;
+    return 0;
+  });
 
-    return contracts;
-  }
-);
+  return contracts;
+});

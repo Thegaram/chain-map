@@ -36,32 +36,30 @@ function createInventoryStore() {
         ...contract,
         id: crypto.randomUUID(),
         createdAt: Date.now(),
-        updatedAt: Date.now(),
+        updatedAt: Date.now()
       };
 
-      update(contracts => [...contracts, newContract]);
+      update((contracts) => [...contracts, newContract]);
       return newContract;
     },
 
     updateContract: (id: string, updates: Partial<Omit<ContractRecord, 'id' | 'createdAt'>>) => {
       recordBeforeChange();
 
-      update(contracts =>
-        contracts.map(contract =>
-          contract.id === id
-            ? { ...contract, ...updates, updatedAt: Date.now() }
-            : contract
+      update((contracts) =>
+        contracts.map((contract) =>
+          contract.id === id ? { ...contract, ...updates, updatedAt: Date.now() } : contract
         )
       );
     },
 
     deleteContract: (id: string) => {
       recordBeforeChange();
-      update(contracts => contracts.filter(c => c.id !== id));
+      update((contracts) => contracts.filter((c) => c.id !== id));
     },
 
     getContract: (id: string): ContractRecord | undefined => {
-      return get({ subscribe }).find(c => c.id === id);
+      return get({ subscribe }).find((c) => c.id === id);
     },
 
     clear: () => {
@@ -101,19 +99,16 @@ function createInventoryStore() {
     },
 
     canUndo: () => past.length > 0,
-    canRedo: () => future.length > 0,
+    canRedo: () => future.length > 0
   };
 }
 
 export const inventory = createInventoryStore();
 
-export const allTags = derived(
-  inventory,
-  $inventory => {
-    const tags = new Set<string>();
-    $inventory.forEach(contract => {
-      contract.tags.forEach(tag => tags.add(tag));
-    });
-    return Array.from(tags).sort();
-  }
-);
+export const allTags = derived(inventory, ($inventory) => {
+  const tags = new Set<string>();
+  $inventory.forEach((contract) => {
+    contract.tags.forEach((tag) => tags.add(tag));
+  });
+  return Array.from(tags).sort();
+});

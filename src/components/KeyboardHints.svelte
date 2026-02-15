@@ -15,9 +15,8 @@
 
   function handleKeydown(event: KeyboardEvent) {
     const target = event.target as HTMLElement;
-    const isTyping = target.tagName === 'INPUT' ||
-                     target.tagName === 'TEXTAREA' ||
-                     target.isContentEditable;
+    const isTyping =
+      target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
     // Toggle with ?
     if (event.key === '?' && !event.metaKey && !event.ctrlKey && !isTyping) {

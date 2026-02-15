@@ -8,10 +8,7 @@
       "chainId": 1,
       "name": "Ethereum Mainnet",
       "shortName": "ETH",
-      "rpcUrls": [
-        "https://eth.llamarpc.com",
-        "https://rpc.ankr.com/eth"
-      ],
+      "rpcUrls": ["https://eth.llamarpc.com", "https://rpc.ankr.com/eth"],
       "explorerUrl": "https://etherscan.io",
       "explorerApiUrl": "https://api.etherscan.io/v2/api"
     },
@@ -19,10 +16,7 @@
       "chainId": 534352,
       "name": "Scroll",
       "shortName": "Scroll",
-      "rpcUrls": [
-        "https://rpc.scroll.io",
-        "https://scroll.drpc.org"
-      ],
+      "rpcUrls": ["https://rpc.scroll.io", "https://scroll.drpc.org"],
       "explorerUrl": "https://scrollscan.com",
       "explorerApiUrl": "https://api.scrollscan.com/api"
     }

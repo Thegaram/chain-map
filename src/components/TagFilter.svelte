@@ -14,7 +14,7 @@
   }
 
   function clearTags() {
-    $filters.selectedTags.forEach(tag => filters.toggleTag(tag));
+    $filters.selectedTags.forEach((tag) => filters.toggleTag(tag));
   }
 
   function handleTagKeydown(event: KeyboardEvent, index: number) {

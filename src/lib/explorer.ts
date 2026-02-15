@@ -47,20 +47,25 @@ export async function fetchAbiFromExplorer(
     // Handle non-JSON responses (404, HTML error pages, etc.)
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
-      throw new Error(`${chain.name} explorer returned non-JSON response. The explorer API may not be available.`);
+      throw new Error(
+        `${chain.name} explorer returned non-JSON response. The explorer API may not be available.`
+      );
     }
 
     const data = await response.json();
 
     if (data.status !== '1' || !data.result || data.result.length === 0) {
-
       // Check for specific error messages
       if (data.result && typeof data.result === 'string') {
         if (data.result.includes('API key') || data.result.includes('Invalid API Key')) {
-          throw new Error(`${chain.name} explorer requires a valid API key. Please add one in chain settings.`);
+          throw new Error(
+            `${chain.name} explorer requires a valid API key. Please add one in chain settings.`
+          );
         }
         if (data.result.includes('rate limit')) {
-          throw new Error(`${chain.name} explorer rate limit exceeded. Please add an API key or try again later.`);
+          throw new Error(
+            `${chain.name} explorer rate limit exceeded. Please add an API key or try again later.`
+          );
         }
       }
 

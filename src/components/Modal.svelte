@@ -24,9 +24,7 @@
     <div class="modal" style="max-width: {maxWidth}">
       <div class="modal-header">
         <h2>{title}</h2>
-        <button class="close-btn" on:click={onClose} title="Close (Esc)">
-          ✕
-        </button>
+        <button class="close-btn" on:click={onClose} title="Close (Esc)"> ✕ </button>
       </div>
       <div class="modal-content">
         <slot />

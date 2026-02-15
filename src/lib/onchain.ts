@@ -90,7 +90,8 @@ export interface ProxyInfo {
 }
 
 // EIP-1967 storage slots
-const EIP1967_IMPLEMENTATION_SLOT = '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc';
+const EIP1967_IMPLEMENTATION_SLOT =
+  '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc';
 const EIP1967_BEACON_SLOT = '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50';
 
 // EIP-1167 minimal proxy pattern
@@ -106,7 +107,10 @@ export async function detectProxy(address: Address, chainId: number): Promise<Pr
       slot: EIP1967_IMPLEMENTATION_SLOT as `0x${string}`
     });
 
-    if (implSlot && implSlot !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+    if (
+      implSlot &&
+      implSlot !== '0x0000000000000000000000000000000000000000000000000000000000000000'
+    ) {
       const implementation = '0x' + implSlot.slice(-40);
       return {
         isProxy: true,
@@ -121,7 +125,10 @@ export async function detectProxy(address: Address, chainId: number): Promise<Pr
       slot: EIP1967_BEACON_SLOT as `0x${string}`
     });
 
-    if (beaconSlot && beaconSlot !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+    if (
+      beaconSlot &&
+      beaconSlot !== '0x0000000000000000000000000000000000000000000000000000000000000000'
+    ) {
       return {
         isProxy: true,
         type: 'eip1967-beacon',
@@ -157,11 +164,11 @@ export function formatProxyType(type: ProxyType): string {
   if (!type) return 'Not a proxy';
 
   const names: Record<NonNullable<ProxyType>, string> = {
-    'eip1967': 'EIP-1967 Proxy',
+    eip1967: 'EIP-1967 Proxy',
     'eip1967-beacon': 'EIP-1967 Beacon',
-    'eip1167': 'EIP-1167 Minimal Proxy',
-    'transparent': 'Transparent Proxy',
-    'uups': 'UUPS Proxy'
+    eip1167: 'EIP-1167 Minimal Proxy',
+    transparent: 'Transparent Proxy',
+    uups: 'UUPS Proxy'
   };
 
   return names[type] || type;
@@ -171,7 +178,9 @@ export function formatProxyType(type: ProxyType): string {
 // Auto-Fetch Missing Data
 // ============================================================================
 
-async function fetchMissingBytecode(contract: ContractRecord): Promise<Partial<ContractRecord> | null> {
+async function fetchMissingBytecode(
+  contract: ContractRecord
+): Promise<Partial<ContractRecord> | null> {
   if (contract.codehash) return null;
 
   try {
@@ -188,7 +197,9 @@ async function fetchMissingBytecode(contract: ContractRecord): Promise<Partial<C
   }
 }
 
-async function fetchMissingProxy(contract: ContractRecord): Promise<Partial<ContractRecord> | null> {
+async function fetchMissingProxy(
+  contract: ContractRecord
+): Promise<Partial<ContractRecord> | null> {
   if (contract.proxyType !== undefined) return null;
 
   try {
@@ -226,17 +237,13 @@ export async function fetchMissingDataBatch(
   updateFn: (id: string, updates: Partial<ContractRecord>) => void,
   batchSize: number = 5
 ): Promise<void> {
-  const contractsNeedingUpdates = contracts.filter(
-    c => !c.codehash || c.proxyType === undefined
-  );
+  const contractsNeedingUpdates = contracts.filter((c) => !c.codehash || c.proxyType === undefined);
 
   if (contractsNeedingUpdates.length === 0) return;
 
   // Process in batches
   for (let i = 0; i < contractsNeedingUpdates.length; i += batchSize) {
     const batch = contractsNeedingUpdates.slice(i, i + batchSize);
-    await Promise.all(
-      batch.map(contract => fetchMissingData(contract, updateFn))
-    );
+    await Promise.all(batch.map((contract) => fetchMissingData(contract, updateFn)));
   }
 }

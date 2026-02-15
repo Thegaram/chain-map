@@ -64,12 +64,13 @@
         navigator.clipboard.writeText(contract.address);
         toast.show('Address copied to clipboard');
         break;
-      case 'open-explorer':
+      case 'open-explorer': {
         const explorerUrl = getExplorerAddressUrl(contract.address, chain);
         if (explorerUrl) {
           window.open(explorerUrl, '_blank');
         }
         break;
+      }
       case 'duplicate':
         // Create a copy of the contract
         inventory.addContract({
@@ -78,7 +79,7 @@
           chainId: contract.chainId,
           type: contract.type,
           tags: [...contract.tags],
-          source: contract.source,
+          source: contract.source
         });
         await saveIfDirty();
         break;
@@ -94,13 +95,15 @@
     contextMenuContract = null;
   }
 
-  $: contextMenuItems = contextMenuContract ? [
-    { label: 'Copy Address', icon: '📋', action: 'copy-address' },
-    { label: 'Open in Explorer', icon: '🔗', action: 'open-explorer' },
-    { divider: true, label: '', action: '' },
-    { label: 'Duplicate', icon: '📄', action: 'duplicate' },
-    { label: 'Delete', icon: '🗑️', action: 'delete', danger: true },
-  ] as MenuItem[] : [];
+  $: contextMenuItems = contextMenuContract
+    ? ([
+        { label: 'Copy Address', icon: '📋', action: 'copy-address' },
+        { label: 'Open in Explorer', icon: '🔗', action: 'open-explorer' },
+        { divider: true, label: '', action: '' },
+        { label: 'Duplicate', icon: '📄', action: 'duplicate' },
+        { label: 'Delete', icon: '🗑️', action: 'delete', danger: true }
+      ] as MenuItem[])
+    : [];
 
   // Check if inventory is truly empty (no contracts at all)
   $: isTrulyEmpty = $inventory.length === 0;
@@ -196,10 +199,8 @@
     <div class="empty-state">
       {#if isTrulyEmpty}
         <div class="empty-icon">📦</div>
-        <h3 class="empty-title">Welcome to Contract Inventory</h3>
-        <p class="empty-description">
-          Your inventory is empty. Get started by:
-        </p>
+        <h3 class="empty-title">Welcome to Chain Map</h3>
+        <p class="empty-description">Your inventory is empty. Get started by:</p>
         <div class="empty-actions">
           <div class="empty-action-item">
             <span class="action-key">N</span>

@@ -31,10 +31,7 @@ export function isValidHexHash(hash: string): boolean {
 /**
  * Validate contract form data
  */
-export function validateContractForm(data: {
-  label: string;
-  address: string;
-}): ValidationResult {
+export function validateContractForm(data: { label: string; address: string }): ValidationResult {
   const errors: Record<string, string> = {};
 
   if (!data.label.trim()) {
@@ -59,6 +56,6 @@ export function validateContractForm(data: {
 export function parseTags(tagsString: string): string[] {
   return tagsString
     .split(',')
-    .map(t => t.trim())
-    .filter(t => t.length > 0);
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
 }

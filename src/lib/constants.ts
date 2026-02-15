@@ -16,7 +16,7 @@ export const FILE_CONFIG = {
 
 // Database configuration
 export const DB_CONFIG = {
-  NAME: 'contract-inventory-db',
+  NAME: 'chain-map-db',
   STORE_NAME: 'file-handles',
   HANDLE_KEY: 'current-file-handle',
   URL_KEY: 'source-url',
@@ -40,7 +40,8 @@ export const ERROR_MESSAGES = {
   UNSUPPORTED_SCHEMA: (version: number) => `Unsupported schema version: ${version}`,
   INVALID_CONTRACTS: 'Invalid inventory file: contracts must be an array',
   INVALID_CHAINS: 'Invalid inventory file: chains must be an array',
-  INVALID_CONTRACT: (index: number) => `Invalid contract at index ${index}: missing required fields`,
+  INVALID_CONTRACT: (index: number) =>
+    `Invalid contract at index ${index}: missing required fields`,
   PERMISSION_DENIED: 'Permission denied',
   READ_PERMISSION_DENIED: 'Read permission denied',
   WRITE_PERMISSION_DENIED: 'Write permission denied'
@@ -91,7 +92,8 @@ export const INVENTORY_EXAMPLES: InventoryExample[] = [
   {
     id: 'scroll-core',
     name: 'Scroll Core Contracts',
-    description: 'Essential Scroll L2 infrastructure contracts including bridges and messengers on Ethereum and Scroll',
+    description:
+      'Essential Scroll L2 infrastructure contracts including bridges and messengers on Ethereum and Scroll',
     url: '/examples/scroll-core.json',
     tags: ['Scroll', 'L2', 'Bridge', 'Infrastructure']
   }

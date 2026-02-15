@@ -4,10 +4,7 @@
   export let variant: 'text' | 'rect' | 'circle' = 'text';
 </script>
 
-<div
-  class="skeleton skeleton-{variant}"
-  style="width: {width}; height: {height};"
-></div>
+<div class="skeleton skeleton-{variant}" style="width: {width}; height: {height};"></div>
 
 <style>
   .skeleton {

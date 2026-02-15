@@ -3,8 +3,20 @@
   import { settings } from '../lib/stores/settings';
   import { chains } from '../lib/stores/chains';
   import { inventory } from '../lib/stores/inventory';
-  import { saveInventory, loadInventory, isDirty, fileStatus, saveIfDirty, isReadOnly } from '../lib/stores/persistence';
-  import { contractFormOpen, contractFormInitialAddress, openContractForm, closeContractForm } from '../lib/stores/ui';
+  import {
+    saveInventory,
+    loadInventory,
+    isDirty,
+    fileStatus,
+    saveIfDirty,
+    isReadOnly
+  } from '../lib/stores/persistence';
+  import {
+    contractFormOpen,
+    contractFormInitialAddress,
+    openContractForm,
+    closeContractForm
+  } from '../lib/stores/ui';
   import ContractFormModal from './ContractFormModal.svelte';
   import ActionsMenu from './ActionsMenu.svelte';
   import { registerShortcut, unregisterShortcut } from '../lib/keyboardShortcuts';
@@ -99,16 +111,17 @@
       }
     ];
 
-    shortcuts.forEach(s => registerShortcut(s));
+    shortcuts.forEach((s) => registerShortcut(s));
 
     return () => {
-      shortcuts.forEach(s => unregisterShortcut(s));
+      shortcuts.forEach((s) => unregisterShortcut(s));
     };
   });
 </script>
 
 <header class="top-bar">
   <div class="top-bar-section">
+    <h1 class="app-title">Chain Map</h1>
     <input
       bind:this={searchInput}
       type="text"
@@ -161,15 +174,19 @@
   <div class="top-bar-section actions">
     <ActionsMenu />
 
-    <button class="action-btn" on:click={handleAddRecord} title="Add record (N)">
-      +
-    </button>
+    <button class="action-btn" on:click={handleAddRecord} title="Add record (N)"> + </button>
 
     <button class="action-btn" on:click={toggleTheme} title="Toggle theme">
       {currentTheme === 'light' ? THEME_ICONS.LIGHT : THEME_ICONS.DARK}
     </button>
   </div>
 </header>
+
+<ContractFormModal
+  open={$contractFormOpen}
+  onClose={closeContractForm}
+  initialAddress={$contractFormInitialAddress}
+/>
 
 <style>
   .top-bar {
@@ -190,6 +207,15 @@
 
   .top-bar-section.filters {
     flex: 1;
+  }
+
+  .app-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    user-select: none;
   }
 
   .search-input {
@@ -272,13 +298,12 @@
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 </style>
-
-<ContractFormModal
-  open={$contractFormOpen}
-  onClose={closeContractForm}
-  initialAddress={$contractFormInitialAddress}
-/>

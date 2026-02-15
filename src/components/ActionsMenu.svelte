@@ -118,7 +118,7 @@
 </div>
 
 <KeyboardHints bind:open={showKeyboardHints} />
-<LoadFromUrlModal open={showUrlModal} onClose={() => showUrlModal = false} />
+<LoadFromUrlModal open={showUrlModal} onClose={() => (showUrlModal = false)} />
 
 <style>
   .actions-menu-container {

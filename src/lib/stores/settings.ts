@@ -6,7 +6,7 @@ import type { AppSettings } from '../types';
  */
 function createSettingsStore() {
   const defaultSettings: AppSettings = {
-    theme: 'system',
+    theme: 'system'
   };
 
   const { subscribe, set, update } = writable<AppSettings>(defaultSettings);
@@ -30,7 +30,7 @@ function createSettingsStore() {
      * Update settings and persist to localStorage
      */
     update: (updater: (settings: AppSettings) => AppSettings) => {
-      update(settings => {
+      update((settings) => {
         const updated = updater(settings);
         if (typeof window !== 'undefined') {
           localStorage.setItem('app-settings', JSON.stringify(updated));
@@ -43,7 +43,7 @@ function createSettingsStore() {
      * Set theme
      */
     setTheme: (theme: AppSettings['theme']) => {
-      update(settings => {
+      update((settings) => {
         const updated = { ...settings, theme };
         if (typeof window !== 'undefined') {
           localStorage.setItem('app-settings', JSON.stringify(updated));
@@ -60,7 +60,7 @@ function createSettingsStore() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('app-settings');
       }
-    },
+    }
   };
 }
 

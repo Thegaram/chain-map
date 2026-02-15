@@ -1,7 +1,17 @@
 <script lang="ts">
   import DetailsTab from './DetailsTab.svelte';
   import AbiTab from './AbiTab.svelte';
-  import { drawerOpen, selectedContractId, activeTab, closeDrawer, setActiveTab, goBack, goForward, canGoBack, canGoForward } from '../lib/stores/ui';
+  import {
+    drawerOpen,
+    selectedContractId,
+    activeTab,
+    closeDrawer,
+    setActiveTab,
+    goBack,
+    goForward,
+    canGoBack,
+    canGoForward
+  } from '../lib/stores/ui';
   import { inventory } from '../lib/stores/inventory';
   import { UI_MESSAGES } from '../lib/constants';
   import { saveIfDirty } from '../lib/stores/persistence';
@@ -59,7 +69,7 @@
   async function handleDelete() {
     if (!$selectedContractId) return;
 
-    const contract = $inventory.find(c => c.id === $selectedContractId);
+    const contract = $inventory.find((c) => c.id === $selectedContractId);
     if (!contract) return;
 
     if (confirm(UI_MESSAGES.DELETE_CONFIRM(contract.label))) {
@@ -111,12 +121,7 @@
       <div class="drawer-header">
         <div class="header-left">
           <div class="nav-buttons">
-            <button
-              class="nav-btn"
-              on:click={goBack}
-              disabled={!$canGoBack}
-              title="Go back"
-            >
+            <button class="nav-btn" on:click={goBack} disabled={!$canGoBack} title="Go back">
               ←
             </button>
             <button
@@ -154,13 +159,22 @@
 
         <div class="header-actions">
           <button class="icon-btn delete-btn" on:click={handleDelete} title="Delete contract">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M2 4h12M5.5 4V2.5h5V4M6.5 7v5M9.5 7v5M3.5 4l.5 9.5h8l.5-9.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path
+                d="M2 4h12M5.5 4V2.5h5V4M6.5 7v5M9.5 7v5M3.5 4l.5 9.5h8l.5-9.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
-          <button class="icon-btn close-btn" on:click={closeDrawer} title="Close (Esc)">
-            ✕
-          </button>
+          <button class="icon-btn close-btn" on:click={closeDrawer} title="Close (Esc)"> ✕ </button>
         </div>
       </div>
 

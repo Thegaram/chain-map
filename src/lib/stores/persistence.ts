@@ -6,7 +6,20 @@ import { writable, derived, get } from 'svelte/store';
 import { inventory } from './inventory';
 import { chains } from './chains';
 import { settings } from './settings';
-import { saveFile, loadFile, loadFromHandle, verifyPermission, serializeInventory, deserializeInventory, storeFileHandle, retrieveFileHandle, clearFileHandle, storeSourceUrl, retrieveSourceUrl, clearSourceUrl } from '../storage';
+import {
+  saveFile,
+  loadFile,
+  loadFromHandle,
+  verifyPermission,
+  serializeInventory,
+  deserializeInventory,
+  storeFileHandle,
+  retrieveFileHandle,
+  clearFileHandle,
+  storeSourceUrl,
+  retrieveSourceUrl,
+  clearSourceUrl
+} from '../storage';
 import { FILE_CONFIG, UI_MESSAGES } from '../constants';
 import { fetchMissingDataBatch } from '../onchain';
 
@@ -81,11 +94,7 @@ export async function saveInventory(saveAs: boolean = false): Promise<boolean> {
     }
 
     // Serialize current state
-    const json = serializeInventory(
-      get(inventory),
-      get(chains),
-      get(settings)
-    );
+    const json = serializeInventory(get(inventory), get(chains), get(settings));
 
     isSaving.set(true);
 
@@ -166,7 +175,7 @@ export async function loadInventory(): Promise<boolean> {
       // Load into stores
       inventory.load(data.contracts);
       chains.load(data.chains);
-      settings.update(s => ({ ...s, ...data.settings }));
+      settings.update((s) => ({ ...s, ...data.settings }));
 
       // Clear read-only mode (loading local file)
       sourceUrl.set(null);
@@ -193,10 +202,9 @@ export async function loadInventory(): Promise<boolean> {
 
     // Auto-fetch missing on-chain data in background
     // Note: This won't trigger saves because we save explicitly on user edits only
-    fetchMissingDataBatch(
-      get(inventory),
-      (id, updates) => inventory.updateContract(id, updates)
-    ).catch(err => console.error('Auto-fetch failed:', err));
+    fetchMissingDataBatch(get(inventory), (id, updates) =>
+      inventory.updateContract(id, updates)
+    ).catch((err) => console.error('Auto-fetch failed:', err));
 
     return true;
   } catch (error) {
@@ -228,7 +236,7 @@ export async function loadInventoryFromUrl(url: string): Promise<void> {
       signal: controller.signal,
       mode: 'cors',
       headers: {
-        'Accept': 'application/json'
+        Accept: 'application/json'
       }
     });
 
@@ -257,7 +265,7 @@ export async function loadInventoryFromUrl(url: string): Promise<void> {
       // Load into stores
       inventory.load(data.contracts);
       chains.load(data.chains);
-      settings.update(s => ({ ...s, ...data.settings }));
+      settings.update((s) => ({ ...s, ...data.settings }));
 
       // Extract filename from URL
       const urlPath = new URL(url).pathname;
@@ -279,10 +287,9 @@ export async function loadInventoryFromUrl(url: string): Promise<void> {
     }
 
     // Auto-fetch missing on-chain data in background
-    fetchMissingDataBatch(
-      get(inventory),
-      (id, updates) => inventory.updateContract(id, updates)
-    ).catch(err => console.error('Auto-fetch failed:', err));
+    fetchMissingDataBatch(get(inventory), (id, updates) =>
+      inventory.updateContract(id, updates)
+    ).catch((err) => console.error('Auto-fetch failed:', err));
   } catch (error: any) {
     clearTimeout(timeoutId);
 
@@ -354,7 +361,7 @@ export async function restoreLastFile(): Promise<boolean> {
       // Load into stores
       inventory.load(data.contracts);
       chains.load(data.chains);
-      settings.update(s => ({ ...s, ...data.settings }));
+      settings.update((s) => ({ ...s, ...data.settings }));
 
       // Update file state
       fileHandle.set(handle);
@@ -366,10 +373,9 @@ export async function restoreLastFile(): Promise<boolean> {
     }
 
     // Auto-fetch missing on-chain data in background
-    fetchMissingDataBatch(
-      get(inventory),
-      (id, updates) => inventory.updateContract(id, updates)
-    ).catch(err => console.error('Auto-fetch failed:', err));
+    fetchMissingDataBatch(get(inventory), (id, updates) =>
+      inventory.updateContract(id, updates)
+    ).catch((err) => console.error('Auto-fetch failed:', err));
 
     return true;
   } catch (error) {
@@ -410,11 +416,7 @@ export async function newInventory(): Promise<void> {
  * Export inventory as JSON (download)
  */
 export function exportInventory(): void {
-  const json = serializeInventory(
-    get(inventory),
-    get(chains),
-    get(settings)
-  );
+  const json = serializeInventory(get(inventory), get(chains), get(settings));
 
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);

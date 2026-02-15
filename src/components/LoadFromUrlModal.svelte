@@ -82,17 +82,12 @@
   }
 </script>
 
-<Modal
-  {open}
-  onClose={handleClose}
-  title="Open from URL"
-  maxWidth="700px"
->
+<Modal {open} onClose={handleClose} title="Open from URL" maxWidth="700px">
   <div class="tabs">
     <button
       class="tab"
       class:active={activeTab === 'url'}
-      on:click={() => activeTab = 'url'}
+      on:click={() => (activeTab = 'url')}
       disabled={loading}
     >
       URL
@@ -100,7 +95,7 @@
     <button
       class="tab"
       class:active={activeTab === 'examples'}
-      on:click={() => activeTab = 'examples'}
+      on:click={() => (activeTab = 'examples')}
       disabled={loading}
     >
       Examples
@@ -114,9 +109,7 @@
           Load an inventory from a public HTTPS URL. The inventory will be opened in read-only mode.
           You can browse and inspect contracts, but changes won't be saved to the URL.
         </p>
-        <p class="tip">
-          💡 Use "Save As" to create a local editable copy.
-        </p>
+        <p class="tip">💡 Use "Save As" to create a local editable copy.</p>
       </div>
 
       <div class="field-group">
@@ -138,12 +131,7 @@
       </div>
 
       <div class="form-actions">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          on:click={handleClose}
-          disabled={loading}
-        >
+        <button type="button" class="btn btn-secondary" on:click={handleClose} disabled={loading}>
           Cancel
         </button>
         <button
@@ -160,8 +148,8 @@
     <div class="tab-content">
       <div class="info-box">
         <p>
-          Choose from curated 3rd-party inventory examples. These are community-contributed
-          contract collections you can explore.
+          Choose from curated 3rd-party inventory examples. These are community-contributed contract
+          collections you can explore.
         </p>
       </div>
 
@@ -192,12 +180,7 @@
       </div>
 
       <div class="form-actions">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          on:click={handleClose}
-          disabled={loading}
-        >
+        <button type="button" class="btn btn-secondary" on:click={handleClose} disabled={loading}>
           Cancel
         </button>
       </div>

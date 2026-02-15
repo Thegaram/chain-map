@@ -57,7 +57,7 @@
         label: label.trim(),
         chainId,
         tags: tagArray,
-        source: source.trim() || undefined,
+        source: source.trim() || undefined
       });
       await saveIfDirty();
     } else {
@@ -68,19 +68,18 @@
         chainId,
         type: 'implementation', // Default, will be updated by proxy detection
         tags: tagArray,
-        source: source.trim() || undefined,
+        source: source.trim() || undefined
       });
       await saveIfDirty();
 
       // Auto-fetch on-chain data for newly added contract
       if (newContract) {
-        fetchMissingData(
-          newContract,
-          (id, updates) => inventory.updateContract(id, updates)
-        ).then(() => {
-          // Save after auto-fetch completes
-          saveIfDirty();
-        }).catch(err => console.error('Auto-fetch failed:', err));
+        fetchMissingData(newContract, (id, updates) => inventory.updateContract(id, updates))
+          .then(() => {
+            // Save after auto-fetch completes
+            saveIfDirty();
+          })
+          .catch((err) => console.error('Auto-fetch failed:', err));
       }
     }
 
@@ -175,9 +174,7 @@
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-secondary" on:click={handleClose}>
-        Cancel
-      </button>
+      <button type="button" class="btn btn-secondary" on:click={handleClose}> Cancel </button>
       <button type="submit" class="btn btn-primary">
         {contract ? 'Save Changes' : 'Add Contract'}
       </button>

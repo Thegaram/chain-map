@@ -22,12 +22,16 @@ export function serializeInventory(
     contracts
   };
   // Custom replacer to handle BigInt values
-  return JSON.stringify(data, (key, value) => {
-    if (typeof value === 'bigint') {
-      return value.toString();
-    }
-    return value;
-  }, 2);
+  return JSON.stringify(
+    data,
+    (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    },
+    2
+  );
 }
 
 export function deserializeInventory(json: string): InventoryData {
@@ -77,9 +81,11 @@ export function createEmptyInventory(): string {
 // ============================================================================
 
 function isFileSystemSupported(): boolean {
-  return typeof window !== 'undefined' &&
+  return (
+    typeof window !== 'undefined' &&
     'showSaveFilePicker' in window &&
-    'showOpenFilePicker' in window;
+    'showOpenFilePicker' in window
+  );
 }
 
 export async function verifyPermission(
@@ -108,10 +114,12 @@ export async function saveFile(
 ): Promise<FileSystemFileHandle | null> {
   if (isFileSystemSupported()) {
     try {
-      const handle = fileHandle || await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: FILE_CONFIG.FILE_TYPES
-      });
+      const handle =
+        fileHandle ||
+        (await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: FILE_CONFIG.FILE_TYPES
+        }));
 
       // Request write permission for new handles
       if (!fileHandle) {
@@ -145,7 +153,10 @@ export async function saveFile(
   }
 }
 
-export async function loadFile(): Promise<{ content: string; handle?: FileSystemFileHandle } | null> {
+export async function loadFile(): Promise<{
+  content: string;
+  handle?: FileSystemFileHandle;
+} | null> {
   if (isFileSystemSupported()) {
     try {
       const [handle] = await window.showOpenFilePicker({

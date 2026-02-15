@@ -1,5 +1,5 @@
 /**
- * Core data types for Contract Inventory
+ * Core data types for Chain Map
  */
 
 export type ContractType = 'implementation' | 'proxy';
