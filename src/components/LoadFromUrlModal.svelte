@@ -81,6 +81,28 @@
       onClose();
     }
   }
+
+  function formatLastUpdated(dateString: string): string {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Compare dates (ignore time)
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    if (dateOnly.getTime() === todayOnly.getTime()) {
+      return 'Updated today';
+    } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+      return 'Updated yesterday';
+    } else {
+      // Format as "Updated Feb 16, 2026"
+      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+      return `Updated ${date.toLocaleDateString('en-US', options)}`;
+    }
+  }
 </script>
 
 <Modal {open} onClose={handleClose} title="Open from URL" maxWidth="700px">
@@ -176,6 +198,7 @@
               </div>
             </div>
             <p class="example-description">{example.description}</p>
+            <p class="example-updated">{formatLastUpdated(example.lastUpdated)}</p>
           </button>
         {/each}
       </div>
@@ -355,6 +378,13 @@
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
     line-height: 1.5;
+  }
+
+  .example-updated {
+    margin: 0;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-style: italic;
   }
 
   .form-actions {

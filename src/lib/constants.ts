@@ -86,6 +86,7 @@ export interface InventoryExample {
   description: string;
   url: string;
   tags: string[];
+  lastUpdated: string; // ISO date string (YYYY-MM-DD)
 }
 
 export const INVENTORY_EXAMPLES: InventoryExample[] = [
@@ -95,7 +96,8 @@ export const INVENTORY_EXAMPLES: InventoryExample[] = [
     description:
       'Essential Scroll L2 infrastructure contracts including bridges and messengers on Ethereum and Scroll',
     url: 'examples/scroll-core.json',
-    tags: ['Scroll', 'L2', 'Bridge', 'Infrastructure']
+    tags: ['Scroll', 'L2', 'Bridge', 'Infrastructure'],
+    lastUpdated: '2026-02-16'
   }
 ];
 
