@@ -16,8 +16,7 @@
     formatFunctionSignature,
     getReturnType,
     extractAddresses,
-    requiresInput,
-    type AbiFunction
+    requiresInput
   } from '../lib/abi';
   import { createAddressLink } from '../lib/addressLink';
   import { saveIfDirty } from '../lib/stores/persistence';
@@ -26,14 +25,14 @@
   import { getImplementationForProxy } from '../lib/proxyGraph';
 
   $: contract = $selectedContractId ? $inventory.find((c) => c.id === $selectedContractId) : null;
-  $: chain = contract ? $chainMap.get(contract.chainId) : null;
+  $: chain = contract ? $chainMap.get(contract.chainId) : undefined;
 
   // Check if contract is a proxy and if we should use implementation ABI
   $: isProxy = contract?.type === 'proxy' && !!contract.implementation;
-  $: implementationContract = isProxy && contract
-    ? getImplementationForProxy(contract.id, $inventory)
-    : null;
-  $: shouldUseImplAbi = isProxy && implementationContract?.abi && implementationContract.abi.length > 0;
+  $: implementationContract =
+    isProxy && contract ? getImplementationForProxy(contract.id, $inventory) : null;
+  $: shouldUseImplAbi =
+    isProxy && implementationContract?.abi && implementationContract.abi.length > 0;
 
   // Use implementation ABI if proxy, otherwise use contract's own ABI
   $: effectiveContract = shouldUseImplAbi ? implementationContract : contract;
@@ -223,9 +222,7 @@
   {:else if isProxy && !implementationContract?.abi}
     <!-- Proxy with implementation but no ABI -->
     <div class="info-banner">
-      <p class="banner-text">
-        ⓘ Implementation ABI not available. Fetch from explorer?
-      </p>
+      <p class="banner-text">ⓘ Implementation ABI not available. Fetch from explorer?</p>
       <button
         class="fetch-impl-abi-btn"
         on:click={() => {
@@ -257,7 +254,7 @@
     <div class="section">
       <div class="section-header">
         <h3>
-          {effectiveContract.abiContractName || 'Contract ABI'}
+          {effectiveContract!.abiContractName || 'Contract ABI'}
           <span class="function-count">({viewFunctions.length} view functions)</span>
         </h3>
         <button
@@ -350,7 +347,7 @@
                     <code class="result-value">{formatted}</code>
                     {#if addresses.length > 0}
                       <div class="addresses-found">
-                        {#each addresses as address}
+                        {#each addresses as address (address)}
                           {@const link = createAddressLink(address, $inventory, chain)}
                           {#if link.type === 'inventory'}
                             <button

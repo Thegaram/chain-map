@@ -19,7 +19,7 @@ export interface ContractRecord {
   // Cached on-chain data
   codehash?: string;
   bytecodeSize?: number;
-  proxyType?: 'eip1967' | 'eip1167' | 'none';
+  proxyType?: 'eip1967' | 'eip1967-beacon' | 'eip1167' | 'transparent' | 'uups' | 'none';
   implementation?: string;
   // Cached view function results
   viewFunctionCache?: { [key: string]: { value: any; timestamp: number } };
@@ -71,6 +71,18 @@ export interface FilterState {
   selectedChain: number | 'all';
   selectedType: ContractType | 'all';
   selectedTags: string[];
+}
+
+/**
+ * Context menu item
+ */
+export interface MenuItem {
+  label: string;
+  icon?: string;
+  shortcut?: string;
+  action: string;
+  divider?: boolean;
+  danger?: boolean;
 }
 
 /**

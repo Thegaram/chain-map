@@ -1,15 +1,20 @@
 <script lang="ts">
-  import { sortedContracts, sort, filters, hierarchicalContracts, toggleProxyExpansion } from '../lib/stores/viewState';
+  import {
+    sortedContracts,
+    sort,
+    filters,
+    hierarchicalContracts,
+    toggleProxyExpansion
+  } from '../lib/stores/viewState';
   import type { SortField } from '../lib/stores/viewState';
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer, selectedContractId } from '../lib/stores/ui';
   import { focusedContractId } from '../lib/stores/ui';
   import { inventory } from '../lib/stores/inventory';
   import { formatGitHubSource, getGitHubUrl, getExplorerAddressUrl } from '../lib/links';
-  import { onMount, tick } from 'svelte';
+  import { tick } from 'svelte';
   import ContextMenu from './ContextMenu.svelte';
-  import type { MenuItem } from './ContextMenu.svelte';
-  import type { ContractRecord } from '../lib/types';
+  import type { MenuItem, ContractRecord } from '../lib/types';
   import { toast } from '../lib/stores/ui';
   import { saveIfDirty } from '../lib/stores/persistence';
 
@@ -178,7 +183,9 @@
               {#if contract.type === 'proxy'}
                 <span class="proxy-badge" title="Proxy contract">(proxy)</span>
               {:else if row.isNested && contract.type === 'implementation'}
-                <span class="implementation-badge" title="Implementation contract">(implementation)</span>
+                <span class="implementation-badge" title="Implementation contract"
+                  >(implementation)</span
+                >
               {/if}
             </span>
           </td>
@@ -207,7 +214,7 @@
                 on:click|stopPropagation
                 class="table-link"
               >
-                {formatGitHubSource(contract.source)}
+                {formatGitHubSource(contract.source!)}
               </a>
             {:else}
               {contract.source || '—'}
@@ -215,7 +222,7 @@
           </td>
           <td>
             <div class="tags">
-              {#each contract.tags as tag}
+              {#each contract.tags as tag (tag)}
                 <span class="tag">{tag}</span>
               {/each}
             </div>

@@ -3,17 +3,16 @@
   import { selectedContractId, closeDrawer, openDrawer, openContractForm } from '../lib/stores/ui';
   import { chains, chainMap } from '../lib/stores/chains';
   import { parseTags } from '../lib/validation';
-  import { UI_MESSAGES } from '../lib/constants';
   import { getBytecodeInfo, formatBytecodeSize } from '../lib/onchain';
   import { detectProxy, formatProxyType } from '../lib/onchain';
   import { getExplorerAddressUrl, getGitHubUrl } from '../lib/links';
   import type { ContractType, ContractRecord } from '../lib/types';
   import type { Address } from 'viem';
-  import { onMount, tick } from 'svelte';
+  import { tick } from 'svelte';
   import { toast } from '../lib/stores/ui';
   import Skeleton from './Skeleton.svelte';
   import { saveIfDirty } from '../lib/stores/persistence';
-  import { createAddressLink, formatAddress } from '../lib/addressLink';
+  import { createAddressLink } from '../lib/addressLink';
   import { getProxiesForImplementation, getImplementationForProxy } from '../lib/proxyGraph';
 
   // Make contract reactive to inventory changes
@@ -23,19 +22,14 @@
   } else {
     contract = null;
   }
-  $: chain = contract ? $chainMap.get(contract.chainId) : null;
+  $: chain = contract ? $chainMap.get(contract.chainId) : undefined;
 
   // Compute proxy-implementation relationships
-  $: proxiesUsingThisImpl = contract
-    ? getProxiesForImplementation(contract.id, $inventory)
-    : [];
-  $: implementationContract = contract
-    ? getImplementationForProxy(contract.id, $inventory)
-    : null;
+  $: proxiesUsingThisImpl = contract ? getProxiesForImplementation(contract.id, $inventory) : [];
+  $: implementationContract = contract ? getImplementationForProxy(contract.id, $inventory) : null;
 
   let editedLabel = '';
   let editedChainId = 1;
-  let editedType: ContractType = 'implementation';
   let editedTags = '';
   let editedSource = '';
 
@@ -48,7 +42,6 @@
   $: if (contract) {
     editedLabel = contract.label;
     editedChainId = contract.chainId;
-    editedType = contract.type;
     editedTags = contract.tags.join(', ');
     editedSource = contract.source || '';
 
@@ -86,11 +79,6 @@
     saveField('chain', { chainId: editedChainId });
   }
 
-  function handleTypeChange() {
-    if (!contract || editedType === contract.type) return;
-    saveField('type', { type: editedType });
-  }
-
   function handleTagsBlur() {
     if (!contract) return;
     const newTags = parseTags(editedTags);
@@ -122,7 +110,11 @@
     error = null;
 
     try {
-      const bytecodeInfo = await getBytecodeInfo(contract.address as Address, contract.chainId, chain);
+      const bytecodeInfo = await getBytecodeInfo(
+        contract.address as Address,
+        contract.chainId,
+        chain
+      );
 
       if (bytecodeInfo.isEmpty) {
         error = 'No bytecode found at this address';
@@ -156,7 +148,7 @@
       // Save to contract record
       inventory.updateContract(contract.id, {
         type: detectedType,
-        proxyType: proxyInfo.type,
+        proxyType: proxyInfo.type || undefined,
         implementation: proxyInfo.implementation || undefined
       });
       await saveIfDirty();
@@ -199,7 +191,7 @@
         value={contract.address}
         readonly
         class="clickable-copy"
-        on:click={() => copyToClipboard(contract.address, 'Address')}
+        on:click={() => copyToClipboard(contract!.address, 'Address')}
         title="Click to copy"
       />
     </div>
@@ -212,7 +204,7 @@
         {/if}
       </div>
       <select id="chain" bind:value={editedChainId} on:change={handleChainChange}>
-        {#each $chains as chain}
+        {#each $chains as chain (chain.chainId)}
           <option value={chain.chainId}>{chain.name}</option>
         {/each}
       </select>
@@ -286,13 +278,15 @@
           {#if loadingBytecode}
             <Skeleton width="100%" height="1.2rem" />
           {:else if contract.codehash}
-            <code
-              class="info-value clickable"
-              on:click={() => copyToClipboard(contract.codehash!, 'Codehash')}
+            <button
+              class="code-button"
+              on:click={() => copyToClipboard(contract!.codehash!, 'Codehash')}
               title="Click to copy"
             >
-              {contract.codehash}
-            </code>
+              <code class="info-value">
+                {contract.codehash}
+              </code>
+            </button>
           {:else}
             <span class="info-value empty">—</span>
           {/if}
@@ -330,7 +324,7 @@
           {#if loadingProxy}
             <Skeleton width="120px" height="1.2rem" />
           {:else if contract.proxyType}
-            <span class="info-value">{formatProxyType(contract.proxyType)}</span>
+            <span class="info-value">{formatProxyType(contract.proxyType as any)}</span>
           {:else}
             <span class="info-value empty">—</span>
           {/if}
@@ -373,7 +367,7 @@
                   class="add-btn-impl"
                   on:click={() => {
                     closeDrawer();
-                    setTimeout(() => openContractForm(contract.implementation), 100);
+                    setTimeout(() => openContractForm(contract!.implementation), 100);
                   }}
                   title="Add to inventory"
                 >
@@ -394,10 +388,16 @@
         </h3>
         {#if proxiesUsingThisImpl.length > 0}
           <div class="proxy-list">
-            {#each proxiesUsingThisImpl as proxy}
-              <button class="proxy-item" on:click={() => openDrawer(proxy.id)} title="Open {proxy.label}">
+            {#each proxiesUsingThisImpl as proxy (proxy.id)}
+              <button
+                class="proxy-item"
+                on:click={() => openDrawer(proxy.id)}
+                title="Open {proxy.label}"
+              >
                 <span class="proxy-label">{proxy.label}</span>
-                <span class="proxy-address">{proxy.address.slice(0, 10)}...{proxy.address.slice(-8)}</span>
+                <span class="proxy-address"
+                  >{proxy.address.slice(0, 10)}...{proxy.address.slice(-8)}</span
+                >
               </button>
             {/each}
           </div>
@@ -495,14 +495,30 @@
     border-radius: 2px;
   }
 
-  .clickable,
   .clickable-copy {
     cursor: pointer;
     transition: color 0.15s ease;
   }
 
-  .clickable:hover,
   .clickable-copy:hover {
+    color: var(--accent);
+  }
+
+  .code-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: opacity 0.15s ease;
+  }
+
+  .code-button:hover {
+    opacity: 0.8;
+  }
+
+  .code-button:hover code {
     color: var(--accent);
   }
 

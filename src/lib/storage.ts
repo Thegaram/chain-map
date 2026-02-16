@@ -118,7 +118,7 @@ export async function saveFile(
         fileHandle ||
         (await window.showSaveFilePicker({
           suggestedName: fileName,
-          types: FILE_CONFIG.FILE_TYPES
+          types: FILE_CONFIG.FILE_TYPES as any
         }));
 
       // Request write permission for new handles
@@ -160,7 +160,7 @@ export async function loadFile(): Promise<{
   if (isFileSystemSupported()) {
     try {
       const [handle] = await window.showOpenFilePicker({
-        types: FILE_CONFIG.FILE_TYPES,
+        types: FILE_CONFIG.FILE_TYPES as any,
         multiple: false
       });
 

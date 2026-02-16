@@ -48,7 +48,7 @@
     </div>
 
     <div class="tag-chips" role="group" aria-label="Filter by tags">
-      {#each $allTags as tag, index}
+      {#each $allTags as tag, index (tag)}
         <button
           class="tag-chip"
           class:selected={isSelected(tag)}

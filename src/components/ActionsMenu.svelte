@@ -7,7 +7,6 @@
   let showMenu = false;
   let showKeyboardHints = false;
   let showUrlModal = false;
-  let isLoading = false;
 
   function toggleMenu() {
     showMenu = !showMenu;
@@ -17,7 +16,7 @@
     showMenu = false;
   }
 
-  function handleClickOutside(event: MouseEvent) {
+  function handleClickOutside(_event: MouseEvent) {
     if (showMenu) {
       closeMenu();
     }
@@ -30,13 +29,10 @@
 
   async function handleOpen() {
     closeMenu();
-    isLoading = true;
     try {
       await loadInventory();
     } catch (error: any) {
       toast.show(`Failed to open: ${error.message}`, 'error');
-    } finally {
-      isLoading = false;
     }
   }
 
@@ -52,25 +48,19 @@
     }
 
     closeMenu();
-    isLoading = true;
     try {
       await saveInventory(false);
     } catch (error: any) {
       toast.show(`Failed to save: ${error.message}`, 'error');
-    } finally {
-      isLoading = false;
     }
   }
 
   async function handleSaveAs() {
     closeMenu();
-    isLoading = true;
     try {
       await saveInventory(true);
     } catch (error: any) {
       toast.show(`Failed to save: ${error.message}`, 'error');
-    } finally {
-      isLoading = false;
     }
   }
 
@@ -88,7 +78,13 @@
   </button>
 
   {#if showMenu}
-    <div class="menu-dropdown" on:click|stopPropagation>
+    <div
+      class="menu-dropdown"
+      role="menu"
+      tabindex="-1"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+    >
       <button class="menu-item" on:click={handleNewInventory}>
         <span>New</span>
       </button>

@@ -142,7 +142,7 @@
       }}
     >
       <option value="all">All Chains</option>
-      {#each $chains as chain}
+      {#each $chains as chain (chain.chainId)}
         <option value={chain.chainId}>{chain.shortName}</option>
       {/each}
     </select>

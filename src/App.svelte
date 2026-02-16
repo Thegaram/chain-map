@@ -5,7 +5,6 @@
   import Drawer from './components/Drawer.svelte';
   import Toast from './components/Toast.svelte';
   import CommitHash from './components/CommitHash.svelte';
-  import { inventory } from './lib/stores/inventory';
   import { isDirty, restoreLastFile } from './lib/stores/persistence';
   import { drawerOpen } from './lib/stores/ui';
   import { handleKeydown } from './lib/keyboardShortcuts';

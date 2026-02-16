@@ -19,14 +19,12 @@ export function getProxiesForImplementation(
   implementationId: string,
   contracts: ContractRecord[]
 ): ContractRecord[] {
-  const implementation = contracts.find(c => c.id === implementationId);
+  const implementation = contracts.find((c) => c.id === implementationId);
   if (!implementation) return [];
 
   const implementationAddress = implementation.address.toLowerCase();
 
-  return contracts.filter(
-    c => c.implementation?.toLowerCase() === implementationAddress
-  );
+  return contracts.filter((c) => c.implementation?.toLowerCase() === implementationAddress);
 }
 
 /**
@@ -37,21 +35,18 @@ export function getImplementationForProxy(
   proxyId: string,
   contracts: ContractRecord[]
 ): ContractRecord | null {
-  const proxy = contracts.find(c => c.id === proxyId);
+  const proxy = contracts.find((c) => c.id === proxyId);
   if (!proxy || !proxy.implementation) return null;
 
   const implementationAddress = proxy.implementation.toLowerCase();
-  return contracts.find(c => c.address.toLowerCase() === implementationAddress) || null;
+  return contracts.find((c) => c.address.toLowerCase() === implementationAddress) || null;
 }
 
 /**
  * Check if contract is an orphan implementation (no proxies use it)
  */
-export function isOrphanImplementation(
-  contractId: string,
-  contracts: ContractRecord[]
-): boolean {
-  const contract = contracts.find(c => c.id === contractId);
+export function isOrphanImplementation(contractId: string, contracts: ContractRecord[]): boolean {
+  const contract = contracts.find((c) => c.id === contractId);
   if (!contract || contract.type !== 'implementation') return false;
 
   // Check if any proxy points to this implementation
@@ -69,14 +64,10 @@ export function isProxy(contract: ContractRecord): boolean {
 /**
  * Get all proxy-implementation relationships
  */
-export function getAllProxyRelationships(
-  contracts: ContractRecord[]
-): ProxyRelationship[] {
-  return contracts
-    .filter(isProxy)
-    .map(proxy => ({
-      proxyContract: proxy,
-      implementationContract: getImplementationForProxy(proxy.id, contracts),
-      implementationAddress: proxy.implementation!
-    }));
+export function getAllProxyRelationships(contracts: ContractRecord[]): ProxyRelationship[] {
+  return contracts.filter(isProxy).map((proxy) => ({
+    proxyContract: proxy,
+    implementationContract: getImplementationForProxy(proxy.id, contracts),
+    implementationAddress: proxy.implementation!
+  }));
 }

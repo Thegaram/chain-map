@@ -66,13 +66,9 @@ export function getClient(
     chain,
     transport: http(rpcUrl, {
       timeout: 10000, // 10 second timeout (reduced from 30s)
-      retryCount: 0, // We'll handle retries ourselves
-      fetchOptions: {
-        // Add signal for better timeout handling
-        signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined
-      }
+      retryCount: 0 // We'll handle retries ourselves
     })
-  });
+  }) as PublicClient;
 
   clientCache.set(cacheKey, client);
   return client;
@@ -201,7 +197,14 @@ export function formatBytecodeSize(bytes: number): string {
 // Proxy Detection
 // ============================================================================
 
-export type ProxyType = 'eip1967' | 'eip1967-beacon' | 'eip1167' | 'transparent' | 'uups' | null;
+export type ProxyType =
+  | 'eip1967'
+  | 'eip1967-beacon'
+  | 'eip1167'
+  | 'transparent'
+  | 'uups'
+  | 'none'
+  | null;
 
 export interface ProxyInfo {
   isProxy: boolean;
@@ -287,7 +290,8 @@ export function formatProxyType(type: ProxyType): string {
     'eip1967-beacon': 'EIP-1967 Beacon',
     eip1167: 'EIP-1167 Minimal Proxy',
     transparent: 'Transparent Proxy',
-    uups: 'UUPS Proxy'
+    uups: 'UUPS Proxy',
+    none: 'Not a proxy'
   };
 
   return names[type] || type;
@@ -327,7 +331,7 @@ async function fetchMissingProxy(
 
     return {
       type: detectedType,
-      proxyType: proxyInfo.type,
+      proxyType: proxyInfo.type || undefined,
       implementation: proxyInfo.implementation || undefined
     };
   } catch (err) {

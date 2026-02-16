@@ -110,7 +110,6 @@ const store = createViewStateStore();
 
 // Export the store and its actions
 export const viewState = {
-  subscribe: store.subscribe,
   ...store
 };
 
@@ -211,10 +210,10 @@ export const hierarchicalContracts = derived(
 
     // Build a set of implementation IDs that are used by proxies (for duplication)
     const implementationIdsUsedByProxies = new Set<string>();
-    $sorted.forEach(contract => {
+    $sorted.forEach((contract) => {
       if (contract.type === 'proxy' && contract.implementation) {
         const impl = $inventory.find(
-          c => c.address.toLowerCase() === contract.implementation?.toLowerCase()
+          (c) => c.address.toLowerCase() === contract.implementation?.toLowerCase()
         );
         if (impl) {
           implementationIdsUsedByProxies.add(impl.id);
@@ -223,7 +222,7 @@ export const hierarchicalContracts = derived(
     });
 
     // Iterate through sorted contracts
-    $sorted.forEach(contract => {
+    $sorted.forEach((contract) => {
       // Skip implementations that are used by proxies (they'll be added as nested rows)
       if (contract.type === 'implementation' && implementationIdsUsedByProxies.has(contract.id)) {
         return;

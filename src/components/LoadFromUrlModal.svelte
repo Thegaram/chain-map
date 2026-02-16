@@ -85,13 +85,18 @@
   function formatLastUpdated(dateString: string): string {
     const date = new Date(dateString);
     const today = new Date();
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
     // Compare dates (ignore time)
     const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+    const yesterdayOnly = new Date(
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate()
+    );
 
     if (dateOnly.getTime() === todayOnly.getTime()) {
       return 'Updated today';
@@ -99,7 +104,11 @@
       return 'Updated yesterday';
     } else {
       // Format as "Updated Feb 16, 2026"
-      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+      const options: Intl.DateTimeFormatOptions = {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      };
       return `Updated ${date.toLocaleDateString('en-US', options)}`;
     }
   }
@@ -183,7 +192,7 @@
       {/if}
 
       <div class="examples-grid">
-        {#each INVENTORY_EXAMPLES as example}
+        {#each INVENTORY_EXAMPLES as example (example.name)}
           <button
             class="example-card"
             on:click={() => handleLoadExample(example)}
@@ -192,7 +201,7 @@
             <div class="example-header">
               <h3>{example.name}</h3>
               <div class="example-tags">
-                {#each example.tags as tag}
+                {#each example.tags as tag (tag)}
                   <span class="tag">{tag}</span>
                 {/each}
               </div>

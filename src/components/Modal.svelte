@@ -20,7 +20,13 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if open}
-  <div class="modal-backdrop" on:click={handleBackdropClick} role="button" tabindex="-1">
+  <div
+    class="modal-backdrop"
+    role="button"
+    tabindex="-1"
+    on:click={handleBackdropClick}
+    on:keydown={(e) => (e.key === 'Escape' ? onClose() : null)}
+  >
     <div class="modal" style="max-width: {maxWidth}">
       <div class="modal-header">
         <h2>{title}</h2>

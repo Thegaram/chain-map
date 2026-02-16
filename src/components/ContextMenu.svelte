@@ -1,20 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import type { MenuItem } from '../lib/types';
 
   export let x = 0;
   export let y = 0;
   export let visible = false;
 
   const dispatch = createEventDispatcher();
-
-  export interface MenuItem {
-    label: string;
-    icon?: string;
-    shortcut?: string;
-    action: string;
-    divider?: boolean;
-    danger?: boolean;
-  }
 
   export let items: MenuItem[] = [];
 
@@ -23,7 +15,7 @@
     visible = false;
   }
 
-  function handleClickOutside(event: MouseEvent) {
+  function handleClickOutside(_event: MouseEvent) {
     if (visible) {
       visible = false;
     }
@@ -34,7 +26,7 @@
 
 {#if visible}
   <div class="context-menu" style="left: {x}px; top: {y}px;">
-    {#each items as item}
+    {#each items as item (item.action)}
       {#if item.divider}
         <div class="divider"></div>
       {:else}

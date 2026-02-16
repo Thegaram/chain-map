@@ -44,7 +44,7 @@ export function createAddressLink(
   return {
     address,
     type: 'explorer',
-    url: explorerUrl
+    url: explorerUrl || undefined
   };
 }
 

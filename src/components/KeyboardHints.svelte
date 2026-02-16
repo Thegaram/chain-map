@@ -35,15 +35,28 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if showHints}
-  <div class="hints-overlay" on:click={toggleHints} role="button" tabindex="-1">
-    <div class="hints-panel" on:click|stopPropagation>
+  <div
+    class="hints-overlay"
+    role="button"
+    tabindex="-1"
+    on:click={toggleHints}
+    on:keydown={(e) => (e.key === 'Escape' || e.key === '?' ? toggleHints() : null)}
+  >
+    <div
+      class="hints-panel"
+      role="dialog"
+      tabindex="-1"
+      aria-label="Keyboard shortcuts"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+    >
       <div class="hints-header">
         <h3>Keyboard Shortcuts</h3>
         <button class="close-btn" on:click={toggleHints}>✕</button>
       </div>
 
       <div class="hints-list">
-        {#each getShortcuts() as shortcut}
+        {#each getShortcuts() as shortcut (shortcut.description)}
           <div class="hint-item">
             <kbd>{formatShortcut(shortcut)}</kbd>
             <span>{shortcut.description}</span>

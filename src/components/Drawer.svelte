@@ -109,14 +109,20 @@
 />
 
 {#if $drawerOpen}
-  <div class="drawer-backdrop" on:click={handleBackdropClick} role="button" tabindex="-1">
+  <div
+    class="drawer-backdrop"
+    role="button"
+    tabindex="-1"
+    on:click={handleBackdropClick}
+    on:keydown={(e) => (e.key === 'Escape' ? closeDrawer() : null)}
+  >
     <aside class="drawer" style="width: {drawerWidth}px;">
       <div
         class="resize-handle"
-        on:mousedown={handleResizeStart}
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize drawer"
+        on:mousedown={handleResizeStart}
       ></div>
       <div class="drawer-header">
         <div class="header-left">

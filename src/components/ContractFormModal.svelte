@@ -3,9 +3,8 @@
   import { inventory } from '../lib/stores/inventory';
   import { chains } from '../lib/stores/chains';
   import { validateContractForm, parseTags } from '../lib/validation';
-  import type { ContractRecord, ContractType } from '../lib/types';
+  import type { ContractRecord } from '../lib/types';
   import { fetchMissingData } from '../lib/onchain';
-  import { get } from 'svelte/store';
   import { saveIfDirty } from '../lib/stores/persistence';
 
   export let open: boolean;
@@ -140,7 +139,7 @@
           Chain <span class="required">*</span>
         </label>
         <select id="chain" bind:value={chainId}>
-          {#each $chains as chain}
+          {#each $chains as chain (chain.chainId)}
             <option value={chain.chainId}>{chain.name}</option>
           {/each}
         </select>

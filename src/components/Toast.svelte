@@ -17,7 +17,13 @@
 
 <div class="toast-container">
   {#each $toastList as item (item.id)}
-    <div class="toast toast-{item.type || 'success'}" on:click={() => toast.dismiss(item.id)}>
+    <div
+      class="toast toast-{item.type || 'success'}"
+      role="button"
+      tabindex="0"
+      on:click={() => toast.dismiss(item.id)}
+      on:keydown={(e) => (e.key === 'Enter' || e.key === ' ' ? toast.dismiss(item.id) : null)}
+    >
       <span class="toast-icon">{getIcon(item.type)}</span>
       <span class="toast-message">{item.message}</span>
     </div>
