@@ -3,7 +3,8 @@
  */
 
 import { type Address, decodeFunctionResult, encodeFunctionData } from 'viem';
-import { getClient } from './onchain';
+import type { ChainConfig } from './types';
+import { executeWithRetry } from './onchain';
 
 export interface AbiFunction {
   name: string;
@@ -57,11 +58,10 @@ export async function callViewFunction(
   chainId: number,
   abi: any[],
   functionName: string,
-  args: any[] = []
+  args: any[] = [],
+  chainConfig?: ChainConfig
 ): Promise<any> {
-  const client = getClient(chainId);
-
-  try {
+  return executeWithRetry(chainId, chainConfig, async (client) => {
     const data = encodeFunctionData({
       abi,
       functionName,
@@ -91,10 +91,7 @@ export async function callViewFunction(
     });
 
     return decoded;
-  } catch (error: any) {
-    console.error(`Failed to call ${functionName}:`, error);
-    throw new Error(error.shortMessage || error.message || 'Contract call failed');
-  }
+  });
 }
 
 /**

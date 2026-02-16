@@ -5,10 +5,20 @@
 import { writable, derived } from 'svelte/store';
 import type { ContractRecord, ContractType } from '../types';
 import { inventory } from './inventory';
+import { getImplementationForProxy } from '../proxyGraph';
 
 // Types
 export type SortField = 'label' | 'chain' | 'type' | 'updatedAt';
 export type SortDirection = 'asc' | 'desc';
+
+export interface HierarchicalRow {
+  contract: ContractRecord;
+  level: number; // 0 = top-level, 1 = nested implementation
+  isNested: boolean; // True for implementations nested under proxies
+  parentId: string | null; // Parent proxy ID for nested implementations
+  isVisible: boolean; // Whether row should be displayed (based on parent's collapsed state)
+  canExpand: boolean; // True for proxies with implementations in inventory
+}
 
 interface FilterState {
   searchQuery: string;
@@ -85,7 +95,14 @@ function createViewStateStore() {
     },
 
     // Reset
-    reset: () => update(() => initialState)
+    reset: () => update(() => initialState),
+
+    // Proxy expansion toggle
+    toggleProxyExpansion: (proxyId: string) => {
+      inventory.updateContract(proxyId, {
+        isCollapsed: !inventory.getContract(proxyId)?.isCollapsed
+      });
+    }
   };
 }
 
@@ -96,6 +113,8 @@ export const viewState = {
   subscribe: store.subscribe,
   ...store
 };
+
+export const toggleProxyExpansion = store.toggleProxyExpansion;
 
 // Convenience exports for backwards compatibility
 export const filters = {
@@ -183,3 +202,62 @@ export const sortedContracts = derived([filteredContracts, sort], ([$filtered, $
 
   return contracts;
 });
+
+// Derived: hierarchical contracts (with proxy-implementation nesting)
+export const hierarchicalContracts = derived(
+  [sortedContracts, inventory],
+  ([$sorted, $inventory]) => {
+    const rows: HierarchicalRow[] = [];
+
+    // Build a set of implementation IDs that are used by proxies (for duplication)
+    const implementationIdsUsedByProxies = new Set<string>();
+    $sorted.forEach(contract => {
+      if (contract.type === 'proxy' && contract.implementation) {
+        const impl = $inventory.find(
+          c => c.address.toLowerCase() === contract.implementation?.toLowerCase()
+        );
+        if (impl) {
+          implementationIdsUsedByProxies.add(impl.id);
+        }
+      }
+    });
+
+    // Iterate through sorted contracts
+    $sorted.forEach(contract => {
+      // Skip implementations that are used by proxies (they'll be added as nested rows)
+      if (contract.type === 'implementation' && implementationIdsUsedByProxies.has(contract.id)) {
+        return;
+      }
+
+      // Add top-level row (proxy or orphan implementation)
+      const isProxyWithImpl = contract.type === 'proxy' && !!contract.implementation;
+      const implementation = isProxyWithImpl
+        ? getImplementationForProxy(contract.id, $inventory)
+        : null;
+
+      rows.push({
+        contract,
+        level: 0,
+        isNested: false,
+        parentId: null,
+        isVisible: true,
+        canExpand: !!implementation
+      });
+
+      // If proxy with implementation in inventory, add nested implementation row
+      if (implementation) {
+        const isCollapsed = contract.isCollapsed ?? true; // Default to collapsed
+        rows.push({
+          contract: implementation,
+          level: 1,
+          isNested: true,
+          parentId: contract.id,
+          isVisible: !isCollapsed,
+          canExpand: false
+        });
+      }
+    });
+
+    return rows;
+  }
+);

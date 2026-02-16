@@ -23,6 +23,8 @@ export interface ContractRecord {
   implementation?: string;
   // Cached view function results
   viewFunctionCache?: { [key: string]: { value: any; timestamp: number } };
+  // Visual hierarchy control
+  isCollapsed?: boolean; // For proxies: whether implementations are hidden (defaults to true)
   createdAt: number;
   updatedAt: number;
 }
@@ -73,13 +75,26 @@ export interface FilterState {
 
 /**
  * Default chain configurations
+ *
+ * NOTE: Public RPC endpoints often have CORS restrictions when called from browsers.
+ * If you encounter CORS errors, you have several options:
+ *
+ * 1. Use your own RPC endpoint (Alchemy, Infura, QuickNode, etc.)
+ * 2. Use a CORS proxy for development (not recommended for production)
+ * 3. Run the app with a browser extension that disables CORS (development only)
+ *
+ * The endpoints below are selected for CORS compatibility, but availability may vary.
  */
 export const DEFAULT_CHAINS: ChainConfig[] = [
   {
     chainId: 1,
     name: 'Ethereum Mainnet',
     shortName: 'Ethereum',
-    rpcUrls: ['https://eth.llamarpc.com'],
+    rpcUrls: [
+      'https://ethereum-rpc.publicnode.com',
+      'https://rpc.ankr.com/eth',
+      'https://cloudflare-eth.com'
+    ],
     explorerUrl: 'https://etherscan.io',
     explorerApiUrl: 'https://api.etherscan.io/v2/api'
   },
@@ -87,33 +102,49 @@ export const DEFAULT_CHAINS: ChainConfig[] = [
     chainId: 534352,
     name: 'Scroll',
     shortName: 'Scroll',
-    rpcUrls: ['https://rpc.scroll.io'],
+    rpcUrls: [
+      'https://scroll-rpc.publicnode.com',
+      'https://rpc.scroll.io',
+      'https://rpc.ankr.com/scroll'
+    ],
     explorerUrl: 'https://scrollscan.com',
-    explorerApiUrl: 'https://api.etherscan.io/v2/api'
+    explorerApiUrl: 'https://api.scrollscan.com/api'
   },
   {
     chainId: 10,
     name: 'Optimism',
     shortName: 'Optimism',
-    rpcUrls: ['https://mainnet.optimism.io'],
+    rpcUrls: [
+      'https://optimism-rpc.publicnode.com',
+      'https://mainnet.optimism.io',
+      'https://rpc.ankr.com/optimism'
+    ],
     explorerUrl: 'https://optimistic.etherscan.io',
-    explorerApiUrl: 'https://api.etherscan.io/v2/api'
+    explorerApiUrl: 'https://api-optimistic.etherscan.io/api'
   },
   {
     chainId: 42161,
     name: 'Arbitrum One',
     shortName: 'Arbitrum',
-    rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+    rpcUrls: [
+      'https://arbitrum-one-rpc.publicnode.com',
+      'https://arb1.arbitrum.io/rpc',
+      'https://rpc.ankr.com/arbitrum'
+    ],
     explorerUrl: 'https://arbiscan.io',
-    explorerApiUrl: 'https://api.etherscan.io/v2/api'
+    explorerApiUrl: 'https://api.arbiscan.io/api'
   },
   {
     chainId: 8453,
     name: 'Base',
     shortName: 'Base',
-    rpcUrls: ['https://mainnet.base.org'],
+    rpcUrls: [
+      'https://base-rpc.publicnode.com',
+      'https://mainnet.base.org',
+      'https://rpc.ankr.com/base'
+    ],
     explorerUrl: 'https://basescan.org',
-    explorerApiUrl: 'https://api.etherscan.io/v2/api'
+    explorerApiUrl: 'https://api.basescan.org/api'
   }
 ];
 

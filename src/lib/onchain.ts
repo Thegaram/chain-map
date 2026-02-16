@@ -18,27 +18,142 @@ const CHAIN_MAP = {
   8453: base
 } as const;
 
-const clientCache = new Map<number, PublicClient>();
+const clientCache = new Map<string, PublicClient>();
+const lastRequestTime = new Map<string, number>();
+const MIN_REQUEST_INTERVAL = 50; // Minimum 50ms between requests to same RPC (reduced from 100ms)
 
-export function getClient(chainId: number, rpcUrl?: string): PublicClient {
-  const cached = clientCache.get(chainId);
-  if (cached && !rpcUrl) return cached;
+/**
+ * Rate limit requests to prevent overwhelming RPC endpoints
+ * Only applies rate limiting to the same RPC URL, not globally
+ */
+async function rateLimitRequest(rpcUrl: string): Promise<void> {
+  const last = lastRequestTime.get(rpcUrl);
+  if (last) {
+    const elapsed = Date.now() - last;
+    if (elapsed < MIN_REQUEST_INTERVAL) {
+      await new Promise((resolve) => setTimeout(resolve, MIN_REQUEST_INTERVAL - elapsed));
+    }
+  }
+  lastRequestTime.set(rpcUrl, Date.now());
+}
 
+/**
+ * Get RPC client for a chain with fallback support
+ * @param chainId - Chain ID
+ * @param chainConfig - Optional chain config with custom RPC URLs
+ * @param rpcUrlIndex - Which RPC URL to use from the list (for fallback)
+ */
+export function getClient(
+  chainId: number,
+  chainConfig?: ChainConfig,
+  rpcUrlIndex: number = 0
+): PublicClient {
   const chain = CHAIN_MAP[chainId as keyof typeof CHAIN_MAP];
   if (!chain) {
     throw new Error(`Unsupported chain ID: ${chainId}`);
   }
 
+  // Use custom RPC URLs from config if provided, otherwise use viem's defaults
+  const rpcUrls = chainConfig?.rpcUrls || chain.rpcUrls.default.http;
+  const rpcUrl = rpcUrls[rpcUrlIndex % rpcUrls.length];
+
+  // Cache key includes URL to allow multiple clients per chain
+  const cacheKey = `${chainId}-${rpcUrl}`;
+  const cached = clientCache.get(cacheKey);
+  if (cached) return cached;
+
   const client = createPublicClient({
     chain,
-    transport: http(rpcUrl || chain.rpcUrls.default.http[0])
+    transport: http(rpcUrl, {
+      timeout: 10000, // 10 second timeout (reduced from 30s)
+      retryCount: 0, // We'll handle retries ourselves
+      fetchOptions: {
+        // Add signal for better timeout handling
+        signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined
+      }
+    })
   });
 
-  if (!rpcUrl) {
-    clientCache.set(chainId, client);
+  clientCache.set(cacheKey, client);
+  return client;
+}
+
+/**
+ * Check if error is a CORS error
+ */
+function isCorsError(error: any): boolean {
+  const errorMessage = error?.message?.toLowerCase() || '';
+  return (
+    errorMessage.includes('cors') ||
+    errorMessage.includes('failed to fetch') ||
+    errorMessage.includes('network request failed') ||
+    error?.name === 'TypeError'
+  );
+}
+
+/**
+ * Execute an RPC call with retry logic and fallback to alternate RPC URLs
+ */
+export async function executeWithRetry<T>(
+  chainId: number,
+  chainConfig: ChainConfig | undefined,
+  operation: (client: PublicClient) => Promise<T>,
+  maxRetries: number = 2 // Reduced from 3 to fail faster
+): Promise<T> {
+  const rpcUrls = chainConfig?.rpcUrls || [];
+  // Limit total attempts to avoid long waits - try each URL once, max 3 total
+  const totalAttempts = Math.min(Math.max(maxRetries, rpcUrls.length), 3);
+
+  let lastError: Error | null = null;
+  let corsErrorDetected = false;
+
+  for (let attempt = 0; attempt < totalAttempts; attempt++) {
+    const rpcUrlIndex = attempt % Math.max(rpcUrls.length, 1);
+    const client = getClient(chainId, chainConfig, rpcUrlIndex);
+    const rpcUrl = chainConfig?.rpcUrls?.[rpcUrlIndex] || 'default';
+
+    try {
+      // Rate limit requests
+      await rateLimitRequest(rpcUrl);
+
+      // Execute the operation
+      const result = await operation(client);
+      return result;
+    } catch (error: any) {
+      lastError = error;
+
+      if (isCorsError(error)) {
+        corsErrorDetected = true;
+
+        // If it's a CORS error, don't retry - just fail fast
+        // CORS won't magically fix itself with retries
+        break;
+      }
+
+      console.warn(
+        `RPC attempt ${attempt + 1}/${totalAttempts} failed for ${rpcUrl}:`,
+        error.message || error
+      );
+
+      // Shorter backoff: 200ms, 400ms instead of 1s, 2s, 4s
+      if (attempt < totalAttempts - 1) {
+        const backoffMs = Math.min(200 * Math.pow(2, attempt), 1000);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
+    }
   }
 
-  return client;
+  // Provide helpful error message for CORS issues
+  if (corsErrorDetected) {
+    throw new Error(
+      `CORS blocked: Public RPC endpoints don't allow browser requests. ` +
+        `Solution: Use a custom RPC endpoint (Alchemy, Infura, QuickNode) - see RPC_SETUP.md for instructions.`
+    );
+  }
+
+  throw new Error(
+    `All ${totalAttempts} RPC attempts failed. Last error: ${lastError?.message || 'Unknown error'}`
+  );
 }
 
 // ============================================================================
@@ -51,23 +166,28 @@ export interface BytecodeInfo {
   isEmpty: boolean;
 }
 
-export async function getBytecodeInfo(address: Address, chainId: number): Promise<BytecodeInfo> {
-  const client = getClient(chainId);
-  const bytecode = await client.getBytecode({ address });
+export async function getBytecodeInfo(
+  address: Address,
+  chainId: number,
+  chainConfig?: ChainConfig
+): Promise<BytecodeInfo> {
+  return executeWithRetry(chainId, chainConfig, async (client) => {
+    const bytecode = await client.getBytecode({ address });
 
-  if (!bytecode || bytecode === '0x') {
+    if (!bytecode || bytecode === '0x') {
+      return {
+        codehash: '',
+        size: 0,
+        isEmpty: true
+      };
+    }
+
     return {
-      codehash: '',
-      size: 0,
-      isEmpty: true
+      codehash: keccak256(bytecode),
+      size: (bytecode.length - 2) / 2, // Remove '0x' and divide by 2
+      isEmpty: false
     };
-  }
-
-  return {
-    codehash: keccak256(bytecode),
-    size: (bytecode.length - 2) / 2, // Remove '0x' and divide by 2
-    isEmpty: false
-  };
+  });
 }
 
 export function formatBytecodeSize(bytes: number): string {
@@ -97,10 +217,12 @@ const EIP1967_BEACON_SLOT = '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6
 // EIP-1167 minimal proxy pattern
 const EIP1167_PATTERN = /^0x363d3d373d3d3d363d73([0-9a-f]{40})5af43d82803e903d91602b57fd5bf3$/i;
 
-export async function detectProxy(address: Address, chainId: number): Promise<ProxyInfo> {
-  const client = getClient(chainId);
-
-  try {
+export async function detectProxy(
+  address: Address,
+  chainId: number,
+  chainConfig?: ChainConfig
+): Promise<ProxyInfo> {
+  return executeWithRetry(chainId, chainConfig, async (client) => {
     // Check EIP-1967 implementation slot
     const implSlot = await client.getStorageAt({
       address,
@@ -154,10 +276,7 @@ export async function detectProxy(address: Address, chainId: number): Promise<Pr
       type: null,
       implementation: null
     };
-  } catch (error) {
-    console.error('Proxy detection failed:', error);
-    throw error;
-  }
+  });
 }
 
 export function formatProxyType(type: ProxyType): string {

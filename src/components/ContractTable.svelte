@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { sortedContracts, sort, filters } from '../lib/stores/viewState';
+  import { sortedContracts, sort, filters, hierarchicalContracts, toggleProxyExpansion } from '../lib/stores/viewState';
   import type { SortField } from '../lib/stores/viewState';
   import { chainMap } from '../lib/stores/chains';
   import { openDrawer, selectedContractId } from '../lib/stores/ui';
@@ -42,6 +42,12 @@
   function getSortIcon(field: SortField): string {
     if ($sort.field !== field) return '';
     return $sort.direction === 'asc' ? '↑' : '↓';
+  }
+
+  async function handleToggleExpansion(event: MouseEvent, proxyId: string) {
+    event.stopPropagation(); // Prevent drawer from opening
+    toggleProxyExpansion(proxyId);
+    await saveIfDirty();
   }
 
   function handleContextMenu(event: MouseEvent, contract: ContractRecord) {
@@ -120,6 +126,7 @@
   <table class="contract-table">
     <thead>
       <tr>
+        <th class="expand-col"></th>
         <th class="sortable" on:click={() => handleSort('label')}>
           Label {getSortIcon('label')}
         </th>
@@ -132,23 +139,46 @@
       </tr>
     </thead>
     <tbody>
-      {#each $sortedContracts as contract (contract.id)}
+      {#each $hierarchicalContracts as row (row.contract.id + '_' + (row.parentId || 'top'))}
+        {@const contract = row.contract}
         {@const chain = $chainMap.get(contract.chainId)}
         {@const explorerUrl = getExplorerAddressUrl(contract.address, chain)}
         {@const githubUrl = contract.source ? getGitHubUrl(contract.source) : null}
+        {@const isCollapsed = contract.isCollapsed ?? true}
         <tr
           class="contract-row"
           class:selected={$selectedContractId === contract.id}
           class:focused={$focusedContractId === contract.id}
+          class:nested={row.isNested}
+          class:level-1={row.level === 1}
+          style="display: {row.isVisible ? 'table-row' : 'none'}"
           on:click={() => openDrawer(contract.id)}
           on:contextmenu={(e) => handleContextMenu(e, contract)}
           bind:this={rowElements[contract.id]}
         >
+          <td class="expand-cell">
+            {#if row.canExpand}
+              <button
+                class="expand-btn"
+                on:click={(e) => handleToggleExpansion(e, contract.id)}
+                title={isCollapsed ? 'Expand' : 'Collapse'}
+              >
+                {isCollapsed ? '▶' : '▼'}
+              </button>
+            {:else if row.isNested}
+              <span class="nested-indicator">└─</span>
+            {/if}
+          </td>
           <td class="label-cell">
             <span class="label-content">
+              {#if row.isNested}
+                <span class="current-badge" title="Current implementation">•</span>
+              {/if}
               {contract.label}
               {#if contract.type === 'proxy'}
-                <span class="proxy-badge" title="Proxy contract">⇄</span>
+                <span class="proxy-badge" title="Proxy contract">(proxy)</span>
+              {:else if row.isNested && contract.type === 'implementation'}
+                <span class="implementation-badge" title="Implementation contract">(implementation)</span>
               {/if}
             </span>
           </td>
@@ -269,6 +299,11 @@
     color: var(--text-primary);
   }
 
+  th.expand-col {
+    width: 40px;
+    padding: var(--space-sm);
+  }
+
   .contract-row {
     cursor: pointer;
     transition: background-color 0.1s ease;
@@ -299,13 +334,58 @@
     outline-offset: -2px;
   }
 
+  .contract-row.nested {
+    background: var(--bg-secondary);
+  }
+
+  .contract-row.nested:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .contract-row.nested.selected {
+    background: var(--bg-tertiary);
+  }
+
   td {
     padding: var(--space-sm) var(--space-md);
     color: var(--text-primary);
   }
 
+  .expand-cell {
+    width: 40px;
+    padding: var(--space-sm);
+    text-align: center;
+  }
+
+  .expand-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    transition: color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .expand-btn:hover {
+    color: var(--accent);
+  }
+
+  .nested-indicator {
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+  }
+
   .label-cell {
     font-weight: 500;
+  }
+
+  .level-1 .label-cell {
+    padding-left: var(--space-lg);
   }
 
   .label-content {
@@ -319,8 +399,30 @@
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
-    color: var(--accent);
-    font-weight: 600;
+    color: #3b82f6; /* Blue color */
+    font-weight: 500;
+    margin-left: var(--space-xs);
+  }
+
+  .implementation-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: #22c55e; /* Green color */
+    font-weight: 500;
+    margin-left: var(--space-xs);
+  }
+
+  .current-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    margin-right: var(--space-xs);
   }
 
   .address-cell {

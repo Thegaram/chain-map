@@ -23,11 +23,22 @@
   import { saveIfDirty } from '../lib/stores/persistence';
   import type { Address } from 'viem';
   import Skeleton from './Skeleton.svelte';
+  import { getImplementationForProxy } from '../lib/proxyGraph';
 
   $: contract = $selectedContractId ? $inventory.find((c) => c.id === $selectedContractId) : null;
   $: chain = contract ? $chainMap.get(contract.chainId) : null;
-  $: hasAbi = contract?.abi && contract.abi.length > 0;
-  $: viewFunctions = hasAbi ? parseViewFunctions(contract!.abi!) : [];
+
+  // Check if contract is a proxy and if we should use implementation ABI
+  $: isProxy = contract?.type === 'proxy' && !!contract.implementation;
+  $: implementationContract = isProxy && contract
+    ? getImplementationForProxy(contract.id, $inventory)
+    : null;
+  $: shouldUseImplAbi = isProxy && implementationContract?.abi && implementationContract.abi.length > 0;
+
+  // Use implementation ABI if proxy, otherwise use contract's own ABI
+  $: effectiveContract = shouldUseImplAbi ? implementationContract : contract;
+  $: hasAbi = effectiveContract?.abi && effectiveContract.abi.length > 0;
+  $: viewFunctions = hasAbi ? parseViewFunctions(effectiveContract!.abi!) : [];
 
   let loadingAbi = false;
   let callingFunction: { [key: string]: boolean } = {};
@@ -115,20 +126,22 @@
   }
 
   async function callFunction(functionName: string, args: any[]) {
-    if (!contract || !hasAbi || !chain) return;
+    if (!contract || !hasAbi || !chain || !effectiveContract) return;
 
     callingFunction[functionName] = true;
 
     try {
+      // Call using proxy address but with implementation ABI (if proxy)
       const result = await callViewFunction(
         contract.address as Address,
         contract.chainId,
-        contract.abi!,
+        effectiveContract.abi!,
         functionName,
-        args
+        args,
+        chain
       );
 
-      // Cache the result
+      // Cache the result on the original contract (proxy or implementation)
       inventory.updateContract(contract.id, {
         viewFunctionCache: {
           ...contract.viewFunctionCache,
@@ -189,6 +202,53 @@
 </script>
 
 <div class="abi-tab">
+  {#if isProxy && !implementationContract}
+    <!-- Proxy without implementation in inventory -->
+    <div class="info-banner">
+      <p class="banner-text">
+        ⓘ This is a proxy contract. Add the implementation contract to inventory to call functions.
+      </p>
+      {#if contract?.implementation}
+        <button
+          class="add-impl-btn"
+          on:click={() => {
+            closeDrawer();
+            setTimeout(() => openContractForm(contract.implementation), 100);
+          }}
+        >
+          + Add Implementation
+        </button>
+      {/if}
+    </div>
+  {:else if isProxy && !implementationContract?.abi}
+    <!-- Proxy with implementation but no ABI -->
+    <div class="info-banner">
+      <p class="banner-text">
+        ⓘ Implementation ABI not available. Fetch from explorer?
+      </p>
+      <button
+        class="fetch-impl-abi-btn"
+        on:click={() => {
+          if (implementationContract) {
+            openDrawer(implementationContract.id);
+          }
+        }}
+      >
+        Open Implementation
+      </button>
+    </div>
+  {/if}
+
+  {#if shouldUseImplAbi}
+    <!-- Banner indicating we're using implementation ABI -->
+    <div class="success-banner">
+      <span class="banner-icon">✓</span>
+      <span class="banner-text">
+        Using implementation's ABI for function calls ({implementationContract?.label})
+      </span>
+    </div>
+  {/if}
+
   {#if loadingAbi}
     <div class="section">
       <Skeleton width="100%" height="100px" />
@@ -197,7 +257,7 @@
     <div class="section">
       <div class="section-header">
         <h3>
-          {contract.abiContractName || 'Contract ABI'}
+          {effectiveContract.abiContractName || 'Contract ABI'}
           <span class="function-count">({viewFunctions.length} view functions)</span>
         </h3>
         <button
@@ -377,6 +437,56 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
+  }
+
+  .info-banner {
+    padding: var(--space-md);
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .success-banner {
+    padding: var(--space-md);
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .banner-icon {
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  .banner-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .add-impl-btn,
+  .fetch-impl-abi-btn {
+    padding: var(--space-xs) var(--space-md);
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    align-self: flex-start;
+  }
+
+  .add-impl-btn:hover,
+  .fetch-impl-abi-btn:hover {
+    background: var(--accent-hover);
   }
 
   .section {

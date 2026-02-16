@@ -6,7 +6,7 @@
   import { UI_MESSAGES } from '../lib/constants';
   import { getBytecodeInfo, formatBytecodeSize } from '../lib/onchain';
   import { detectProxy, formatProxyType } from '../lib/onchain';
-  import { getExplorerAddressUrl } from '../lib/links';
+  import { getExplorerAddressUrl, getGitHubUrl } from '../lib/links';
   import type { ContractType, ContractRecord } from '../lib/types';
   import type { Address } from 'viem';
   import { onMount, tick } from 'svelte';
@@ -14,6 +14,7 @@
   import Skeleton from './Skeleton.svelte';
   import { saveIfDirty } from '../lib/stores/persistence';
   import { createAddressLink, formatAddress } from '../lib/addressLink';
+  import { getProxiesForImplementation, getImplementationForProxy } from '../lib/proxyGraph';
 
   // Make contract reactive to inventory changes
   let contract: ContractRecord | null = null;
@@ -23,6 +24,14 @@
     contract = null;
   }
   $: chain = contract ? $chainMap.get(contract.chainId) : null;
+
+  // Compute proxy-implementation relationships
+  $: proxiesUsingThisImpl = contract
+    ? getProxiesForImplementation(contract.id, $inventory)
+    : [];
+  $: implementationContract = contract
+    ? getImplementationForProxy(contract.id, $inventory)
+    : null;
 
   let editedLabel = '';
   let editedChainId = 1;
@@ -107,13 +116,13 @@
   }
 
   async function fetchBytecode() {
-    if (!contract) return;
+    if (!contract || !chain) return;
 
     loadingBytecode = true;
     error = null;
 
     try {
-      const bytecodeInfo = await getBytecodeInfo(contract.address as Address, contract.chainId);
+      const bytecodeInfo = await getBytecodeInfo(contract.address as Address, contract.chainId, chain);
 
       if (bytecodeInfo.isEmpty) {
         error = 'No bytecode found at this address';
@@ -134,12 +143,12 @@
   }
 
   async function fetchProxy() {
-    if (!contract) return;
+    if (!contract || !chain) return;
 
     loadingProxy = true;
 
     try {
-      const proxyInfo = await detectProxy(contract.address as Address, contract.chainId);
+      const proxyInfo = await detectProxy(contract.address as Address, contract.chainId, chain);
 
       // Auto-detect type based on proxy detection
       const detectedType: ContractType = proxyInfo.isProxy ? 'proxy' : 'implementation';
@@ -233,6 +242,21 @@
         on:blur={handleSourceBlur}
         placeholder="e.g., scroll-tech/scroll-contracts@v4.0.0 or full GitHub URL"
       />
+      {#if contract.type === 'proxy'}
+        <p class="help-text">
+          Source links to proxy contract code (e.g., TransparentUpgradableProxy)
+        </p>
+      {:else if contract.type === 'implementation'}
+        <p class="help-text">Source links to implementation logic source code</p>
+      {/if}
+      {#if contract.type === 'proxy' && implementationContract?.source}
+        {@const implGitHubUrl = getGitHubUrl(implementationContract.source)}
+        {#if implGitHubUrl}
+          <a href={implGitHubUrl} target="_blank" rel="noopener" class="impl-source-link">
+            View implementation source →
+          </a>
+        {/if}
+      {/if}
     </div>
 
     <div class="divider"></div>
@@ -361,6 +385,27 @@
         {/if}
       </div>
     </div>
+
+    <!-- Used by Proxies section (for implementations) -->
+    {#if contract.type === 'implementation'}
+      <div class="section">
+        <h3>
+          Used by Proxies {#if proxiesUsingThisImpl.length > 0}({proxiesUsingThisImpl.length}){/if}
+        </h3>
+        {#if proxiesUsingThisImpl.length > 0}
+          <div class="proxy-list">
+            {#each proxiesUsingThisImpl as proxy}
+              <button class="proxy-item" on:click={() => openDrawer(proxy.id)} title="Open {proxy.label}">
+                <span class="proxy-label">{proxy.label}</span>
+                <span class="proxy-address">{proxy.address.slice(0, 10)}...{proxy.address.slice(-8)}</span>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <p class="empty-text">Not used by any proxies in inventory</p>
+        {/if}
+      </div>
+    {/if}
 
     {#if chain?.explorerUrl}
       {@const explorerUrl = getExplorerAddressUrl(contract.address, chain)}
@@ -617,5 +662,67 @@
   .add-btn-impl:hover {
     background: var(--accent);
     color: white;
+  }
+
+  .help-text {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin: 0;
+    font-style: italic;
+  }
+
+  .impl-source-link {
+    font-size: var(--font-size-xs);
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .impl-source-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  .proxy-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .proxy-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+  }
+
+  .proxy-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent);
+  }
+
+  .proxy-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .proxy-address {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+  }
+
+  .empty-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-tertiary);
+    font-style: italic;
+    margin: 0;
   }
 </style>
