@@ -4,7 +4,8 @@
     sort,
     filters,
     hierarchicalContracts,
-    toggleProxyExpansion
+    toggleProxyExpansion,
+    viewState
   } from '../lib/stores/viewState';
   import type { SortField } from '../lib/stores/viewState';
   import { chainMap } from '../lib/stores/chains';
@@ -125,13 +126,48 @@
     $filters.selectedChain !== 'all' ||
     $filters.selectedType !== 'all' ||
     $filters.selectedTags.length > 0;
+
+  // Check if all proxies are expanded
+  $: allProxiesExpanded = $inventory
+    .filter((c) => c.type === 'proxy' && c.implementation)
+    .every((c) => !c.isCollapsed);
+
+  async function handleToggleAll() {
+    if (allProxiesExpanded) {
+      viewState.collapseAll();
+    } else {
+      viewState.expandAll();
+    }
+    await saveIfDirty();
+  }
+
+  // Check label for special keywords
+  function isDeprecated(label: string): boolean {
+    return label.toLowerCase().includes('deprecated');
+  }
+
+  function hasTimelock(label: string): boolean {
+    return label.toLowerCase().includes('timelock');
+  }
+
+  function hasMultisig(label: string): boolean {
+    return label.toLowerCase().includes('multisig');
+  }
 </script>
 
 <div class="table-container">
   <table class="contract-table">
     <thead>
       <tr>
-        <th class="expand-col"></th>
+        <th class="expand-col">
+          <button
+            class="expand-all-btn"
+            on:click={handleToggleAll}
+            title={allProxiesExpanded ? 'Collapse all proxies' : 'Expand all proxies'}
+          >
+            {allProxiesExpanded ? '▼' : '▶'}
+          </button>
+        </th>
         <th class="sortable" on:click={() => handleSort('label')}>
           Label {getSortIcon('label')}
         </th>
@@ -175,11 +211,47 @@
             {/if}
           </td>
           <td class="label-cell">
-            <span class="label-content">
+            <span class="label-content" class:deprecated={isDeprecated(contract.label)}>
               {#if row.isNested}
                 <span class="current-badge" title="Current implementation">•</span>
               {/if}
               {contract.label}
+              {#if hasTimelock(contract.label)}
+                <span class="icon-wrapper" title="Timelock">
+                  <svg
+                    class="label-icon"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-label="Timelock"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </span>
+              {/if}
+              {#if hasMultisig(contract.label)}
+                <span class="icon-wrapper" title="Multisig">
+                  <svg
+                    class="label-icon"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-label="Multisig"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </span>
+              {/if}
               {#if contract.type === 'proxy'}
                 <span class="proxy-badge" title="Proxy contract">(proxy)</span>
               {:else if row.isNested && contract.type === 'implementation'}
@@ -381,6 +453,28 @@
     color: var(--accent);
   }
 
+  .expand-all-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    transition: color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .expand-all-btn:hover {
+    color: var(--accent);
+  }
+
+  .expand-all-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .nested-indicator {
     color: var(--text-tertiary);
     font-size: 0.75rem;
@@ -399,6 +493,23 @@
     display: flex;
     align-items: center;
     gap: var(--space-xs);
+  }
+
+  .label-content.deprecated {
+    color: var(--text-tertiary);
+    opacity: 0.6;
+  }
+
+  .icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .label-icon {
+    flex-shrink: 0;
+    color: var(--text-tertiary);
+    opacity: 0.7;
   }
 
   .proxy-badge {

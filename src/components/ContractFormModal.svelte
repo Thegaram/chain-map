@@ -11,6 +11,7 @@
   export let onClose: () => void;
   export let contract: ContractRecord | null = null;
   export let initialAddress: string | undefined = undefined;
+  export let initialChainId: number | undefined = undefined;
 
   let label = '';
   let address = '';
@@ -30,7 +31,7 @@
     // Reset form for new contract
     label = '';
     address = initialAddress || '';
-    chainId = 1;
+    chainId = initialChainId || 1;
     tags = '';
     source = '';
   }

@@ -14,6 +14,7 @@
   import {
     contractFormOpen,
     contractFormInitialAddress,
+    contractFormInitialChainId,
     openContractForm,
     closeContractForm
   } from '../lib/stores/ui';
@@ -186,6 +187,7 @@
   open={$contractFormOpen}
   onClose={closeContractForm}
   initialAddress={$contractFormInitialAddress}
+  initialChainId={$contractFormInitialChainId}
 />
 
 <style>

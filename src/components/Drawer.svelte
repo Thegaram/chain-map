@@ -53,16 +53,23 @@
       return;
     }
 
-    // Arrow key navigation between tabs
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      setActiveTab('details');
-      return;
-    }
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      setActiveTab('abi');
-      return;
+    // Don't intercept arrow keys when typing in inputs
+    const target = event.target as HTMLElement;
+    const isInInput =
+      target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+    // Arrow key navigation between tabs (only when not in input)
+    if (!isInInput) {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setActiveTab('details');
+        return;
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        setActiveTab('abi');
+        return;
+      }
     }
   }
 

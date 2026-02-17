@@ -2,7 +2,7 @@
  * View state: filters and sorting for contract list
  */
 
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import type { ContractRecord, ContractType } from '../types';
 import { inventory } from './inventory';
 import { getImplementationForProxy } from '../proxyGraph';
@@ -101,6 +101,26 @@ function createViewStateStore() {
     toggleProxyExpansion: (proxyId: string) => {
       inventory.updateContract(proxyId, {
         isCollapsed: !inventory.getContract(proxyId)?.isCollapsed
+      });
+    },
+
+    // Expand all proxies
+    expandAll: () => {
+      const contracts = get(inventory);
+      contracts.forEach((contract: ContractRecord) => {
+        if (contract.type === 'proxy' && contract.implementation) {
+          inventory.updateContract(contract.id, { isCollapsed: false });
+        }
+      });
+    },
+
+    // Collapse all proxies
+    collapseAll: () => {
+      const contracts = get(inventory);
+      contracts.forEach((contract: ContractRecord) => {
+        if (contract.type === 'proxy' && contract.implementation) {
+          inventory.updateContract(contract.id, { isCollapsed: true });
+        }
       });
     }
   };

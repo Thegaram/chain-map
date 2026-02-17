@@ -3,7 +3,9 @@
  */
 
 import { writable, derived, get } from 'svelte/store';
-import { sortedContracts } from './viewState';
+import { sortedContracts, hierarchicalContracts } from './viewState';
+import { inventory } from './inventory';
+import type { ContractRecord } from '../types';
 
 // --- Drawer State ---
 
@@ -105,14 +107,25 @@ export const keyboardFocus = {
 
     keyboardFocusIndex.update((index) => {
       const newIndex = index + 1;
-      return newIndex >= contracts.length ? contracts.length - 1 : newIndex;
+      const finalIndex = newIndex >= contracts.length ? contracts.length - 1 : newIndex;
+
+      // Auto-expand if navigating to a hidden nested implementation
+      autoExpandIfNeeded(contracts[finalIndex]);
+
+      return finalIndex;
     });
   },
 
   previous: () => {
     keyboardFocusIndex.update((index) => {
       const newIndex = index - 1;
-      return newIndex < 0 ? 0 : newIndex;
+      const finalIndex = newIndex < 0 ? 0 : newIndex;
+
+      // Auto-expand if navigating to a hidden nested implementation
+      const contracts = get(sortedContracts);
+      autoExpandIfNeeded(contracts[finalIndex]);
+
+      return finalIndex;
     });
   },
 
@@ -140,22 +153,25 @@ export const keyboardFocus = {
 interface ContractFormState {
   open: boolean;
   initialAddress?: string;
+  initialChainId?: number;
 }
 
 const contractFormState = writable<ContractFormState>({
   open: false,
-  initialAddress: undefined
+  initialAddress: undefined,
+  initialChainId: undefined
 });
 
 export const contractFormOpen = derived(contractFormState, ($s) => $s.open);
 export const contractFormInitialAddress = derived(contractFormState, ($s) => $s.initialAddress);
+export const contractFormInitialChainId = derived(contractFormState, ($s) => $s.initialChainId);
 
-export function openContractForm(initialAddress?: string) {
-  contractFormState.set({ open: true, initialAddress });
+export function openContractForm(initialAddress?: string, initialChainId?: number) {
+  contractFormState.set({ open: true, initialAddress, initialChainId });
 }
 
 export function closeContractForm() {
-  contractFormState.set({ open: false, initialAddress: undefined });
+  contractFormState.set({ open: false, initialAddress: undefined, initialChainId: undefined });
 }
 
 // --- Toast Notifications ---
@@ -184,3 +200,23 @@ export const toast = {
     toasts.update((list) => list.filter((t) => t.id !== id));
   }
 };
+
+// --- Helper Functions ---
+
+/**
+ * Auto-expand proxy if navigating to a hidden nested implementation
+ */
+function autoExpandIfNeeded(contract: ContractRecord) {
+  if (!contract) return;
+
+  const rows = get(hierarchicalContracts);
+  const row = rows.find((r) => r.contract.id === contract.id);
+
+  // If this is a nested implementation that's hidden, expand its parent
+  if (row?.isNested && !row.isVisible && row.parentId) {
+    const parentContract = get(inventory).find((c) => c.id === row.parentId);
+    if (parentContract?.isCollapsed) {
+      inventory.updateContract(row.parentId, { isCollapsed: false });
+    }
+  }
+}

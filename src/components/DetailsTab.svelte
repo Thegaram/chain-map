@@ -8,7 +8,6 @@
   import { getExplorerAddressUrl, getGitHubUrl } from '../lib/links';
   import type { ContractType, ContractRecord } from '../lib/types';
   import type { Address } from 'viem';
-  import { tick } from 'svelte';
   import { toast } from '../lib/stores/ui';
   import Skeleton from './Skeleton.svelte';
   import { saveIfDirty } from '../lib/stores/persistence';
@@ -37,19 +36,16 @@
   let loadingProxy = false;
   let error: string | null = null;
   let savedField: string | null = null;
-  let labelInput: HTMLInputElement;
+  let detailsContainer: HTMLDivElement;
 
-  $: if (contract) {
+  $: if (contract && detailsContainer) {
     editedLabel = contract.label;
     editedChainId = contract.chainId;
     editedTags = contract.tags.join(', ');
     editedSource = contract.source || '';
 
-    // Auto-focus first input when contract changes
-    tick().then(() => {
-      labelInput?.focus();
-      labelInput?.select();
-    });
+    // Focus container so Tab goes to first input
+    detailsContainer.focus();
   }
 
   function showSavedIndicator(field: string) {
@@ -166,7 +162,7 @@
 </script>
 
 {#if contract}
-  <div class="details-tab">
+  <div class="details-tab" tabindex="-1" bind:this={detailsContainer}>
     <div class="field-group">
       <div class="label-with-indicator">
         <label for="label">Label</label>
@@ -179,7 +175,6 @@
         type="text"
         bind:value={editedLabel}
         on:blur={handleLabelBlur}
-        bind:this={labelInput}
       />
     </div>
 
@@ -367,7 +362,7 @@
                   class="add-btn-impl"
                   on:click={() => {
                     closeDrawer();
-                    setTimeout(() => openContractForm(contract!.implementation), 100);
+                    setTimeout(() => openContractForm(contract!.implementation, contract!.chainId), 100);
                   }}
                   title="Add to inventory"
                 >
@@ -428,6 +423,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
+    outline: none; /* Hide focus outline when programmatically focused */
   }
 
   .field-group {
