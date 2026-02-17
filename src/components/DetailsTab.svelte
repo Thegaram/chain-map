@@ -13,6 +13,8 @@
   import { saveIfDirty } from '../lib/stores/persistence';
   import { createAddressLink } from '../lib/addressLink';
   import { getProxiesForImplementation, getImplementationForProxy } from '../lib/proxyGraph';
+  import VerificationModal from './VerificationModal.svelte';
+  import { generateVerificationInstructions } from '../lib/verification';
 
   // Make contract reactive to inventory changes
   let contract: ContractRecord | null = null;
@@ -37,6 +39,12 @@
   let error: string | null = null;
   let savedField: string | null = null;
   let detailsContainer: HTMLDivElement;
+  let verificationModalOpen = false;
+  let verificationInstructions = '';
+
+  // Check if verification template is available
+  $: hasVerificationTemplate =
+    contract && chain ? generateVerificationInstructions(contract, chain) !== null : false;
 
   $: if (contract && detailsContainer) {
     editedLabel = contract.label;
@@ -159,6 +167,29 @@
     navigator.clipboard.writeText(text);
     toast.show(`${label} copied to clipboard`);
   }
+
+  function showVerificationInstructions() {
+    if (!contract || !chain) return;
+
+    const instructions = generateVerificationInstructions(contract, chain);
+    if (instructions) {
+      verificationInstructions = instructions;
+      verificationModalOpen = true;
+    } else {
+      toast.show('No verification template available for this repository', 'info');
+    }
+  }
+
+  function closeVerificationModal() {
+    verificationModalOpen = false;
+  }
+
+  async function toggleVerified() {
+    if (!contract) return;
+    inventory.updateContract(contract.id, { verified: !contract.verified });
+    await saveIfDirty();
+    showSavedIndicator('verified');
+  }
 </script>
 
 {#if contract}
@@ -213,7 +244,7 @@
     <div class="field-group">
       <div class="label-with-indicator">
         <label for="source">Source Repository (paste GitHub URL or use owner/repo@ref)</label>
-        {#if savedField === 'source'}
+        {#if savedField === 'source' || savedField === 'verified'}
           <span class="saved-indicator">✓</span>
         {/if}
       </div>
@@ -238,6 +269,23 @@
             View implementation source →
           </a>
         {/if}
+      {/if}
+      {#if contract.source}
+        <div class="source-actions">
+          <label class="verified-toggle">
+            <input
+              type="checkbox"
+              checked={contract.verified || false}
+              on:change={toggleVerified}
+            />
+            <span>Verified</span>
+          </label>
+          {#if hasVerificationTemplate}
+            <button class="verification-btn" on:click={showVerificationInstructions}>
+              📋 View Verification Instructions
+            </button>
+          {/if}
+        </div>
       {/if}
     </div>
 
@@ -415,6 +463,13 @@
     <p>No contract selected</p>
   </div>
 {/if}
+
+<VerificationModal
+  open={verificationModalOpen}
+  onClose={closeVerificationModal}
+  instructions={verificationInstructions}
+  contractLabel={contract?.label || ''}
+/>
 
 <style>
   .details-tab {
@@ -734,5 +789,44 @@
     color: var(--text-tertiary);
     font-style: italic;
     margin: 0;
+  }
+
+  .source-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-top: var(--space-xs);
+  }
+
+  .verified-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .verified-toggle input[type='checkbox'] {
+    cursor: pointer;
+  }
+
+  .verification-btn {
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: fit-content;
+  }
+
+  .verification-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent);
+    color: var(--text-primary);
   }
 </style>

@@ -58,13 +58,11 @@ export function handleKeydown(event: KeyboardEvent) {
   if (!isInInput && !get(drawerOpen)) {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      keyboardFocus.initialize();
       keyboardFocus.next();
       return;
     }
     if (event.key === 'ArrowUp') {
       event.preventDefault();
-      keyboardFocus.initialize();
       keyboardFocus.previous();
       return;
     }

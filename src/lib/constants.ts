@@ -97,7 +97,7 @@ export const INVENTORY_EXAMPLES: InventoryExample[] = [
       'Essential Scroll L2 infrastructure contracts including bridges and messengers on Ethereum and Scroll',
     url: 'examples/scroll-core.json',
     tags: ['Scroll', 'L2', 'Bridge', 'Infrastructure'],
-    lastUpdated: '2026-02-16'
+    lastUpdated: '2026-02-17'
   }
 ];
 

@@ -291,6 +291,9 @@
             {:else}
               {contract.source || '—'}
             {/if}
+            {#if contract.verified}
+              <span class="verified-badge" title="Verified"> ✓ </span>
+            {/if}
           </td>
           <td>
             <div class="tags">
@@ -556,6 +559,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .verified-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: var(--space-xs);
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    vertical-align: middle;
   }
 
   .table-link {

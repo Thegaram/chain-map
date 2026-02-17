@@ -25,6 +25,8 @@ export interface ContractRecord {
   viewFunctionCache?: { [key: string]: { value: any; timestamp: number } };
   // Visual hierarchy control
   isCollapsed?: boolean; // For proxies: whether implementations are hidden (defaults to true)
+  // Verification status
+  verified?: boolean; // Whether contract source has been verified (defaults to false)
   createdAt: number;
   updatedAt: number;
 }
@@ -83,6 +85,17 @@ export interface MenuItem {
   action: string;
   divider?: boolean;
   danger?: boolean;
+}
+
+/**
+ * Verification template for repo-specific verification instructions
+ */
+export interface VerificationTemplate {
+  id: string;
+  name: string;
+  repoPattern: string; // Regex pattern to match GitHub repos (e.g., "^scroll-tech/scroll-contracts$")
+  buildTool: 'foundry' | 'hardhat' | 'mixed';
+  instructions: string; // Markdown with {{variable}} placeholders
 }
 
 /**

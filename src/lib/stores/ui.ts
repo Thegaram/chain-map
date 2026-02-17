@@ -3,7 +3,7 @@
  */
 
 import { writable, derived, get } from 'svelte/store';
-import { sortedContracts, hierarchicalContracts } from './viewState';
+import { hierarchicalContracts } from './viewState';
 import { inventory } from './inventory';
 import type { ContractRecord } from '../types';
 
@@ -43,9 +43,7 @@ export function openDrawer(contractId: string, skipHistory = false) {
 
   if (!skipHistory) {
     drawerHistory.update((h) => {
-      // If we're not at the end of history, truncate the future
       const newHistory = h.history.slice(0, h.currentIndex + 1);
-      // Add new contract ID (avoid duplicates of the same contract in a row)
       if (newHistory[newHistory.length - 1] !== contractId) {
         newHistory.push(contractId);
         return {
@@ -55,6 +53,12 @@ export function openDrawer(contractId: string, skipHistory = false) {
       }
       return h;
     });
+  }
+
+  // Auto-expand if navigating to hidden implementation
+  const contract = get(inventory).find((c) => c.id === contractId);
+  if (contract) {
+    autoExpandIfNeeded(contract);
   }
 }
 
@@ -86,69 +90,126 @@ export function setActiveTab(tab: 'details' | 'abi') {
   drawerState.update((d) => ({ ...d, tab }));
 }
 
-// --- Keyboard Focus ---
+// --- Keyboard Navigation State ---
 
-const keyboardFocusIndex = writable<number>(-1);
+let keyboardSelectedIndex = writable<number>(0);
+
+// Use hierarchical contracts for keyboard navigation (respects visibility)
+export const keyboardSelectedContract = derived(
+  [keyboardSelectedIndex, hierarchicalContracts],
+  ([$index, $rows]) => {
+    const visibleRows = $rows.filter((r) => r.isVisible);
+    return visibleRows[$index]?.contract || null;
+  }
+);
 
 export const focusedContractId = derived(
-  [keyboardFocusIndex, sortedContracts],
-  ([$index, $contracts]) => {
-    if ($index >= 0 && $index < $contracts.length) {
-      return $contracts[$index].id;
-    }
-    return null;
-  }
+  keyboardSelectedContract,
+  ($contract) => $contract?.id || null
 );
 
 export const keyboardFocus = {
   next: () => {
-    const contracts = get(sortedContracts);
-    if (contracts.length === 0) return;
+    const rows = get(hierarchicalContracts);
+    const visibleRows = rows.filter((r) => r.isVisible);
 
-    keyboardFocusIndex.update((index) => {
-      const newIndex = index + 1;
-      const finalIndex = newIndex >= contracts.length ? contracts.length - 1 : newIndex;
+    if (visibleRows.length === 0) return;
 
-      // Auto-expand if navigating to a hidden nested implementation
-      autoExpandIfNeeded(contracts[finalIndex]);
-
-      return finalIndex;
-    });
-  },
-
-  previous: () => {
-    keyboardFocusIndex.update((index) => {
-      const newIndex = index - 1;
-      const finalIndex = newIndex < 0 ? 0 : newIndex;
-
-      // Auto-expand if navigating to a hidden nested implementation
-      const contracts = get(sortedContracts);
-      autoExpandIfNeeded(contracts[finalIndex]);
-
-      return finalIndex;
-    });
-  },
-
-  set: (index: number) => {
-    keyboardFocusIndex.set(index);
-  },
-
-  clear: () => {
-    keyboardFocusIndex.set(-1);
-  },
-
-  initialize: () => {
-    const currentIndex = get(keyboardFocusIndex);
-    if (currentIndex === -1) {
-      const contracts = get(sortedContracts);
-      if (contracts.length > 0) {
-        keyboardFocusIndex.set(0);
-      }
+    const currentIndex = get(keyboardSelectedIndex);
+    const currentVisibleRow = visibleRows[currentIndex];
+    if (!currentVisibleRow) {
+      keyboardSelectedIndex.set(0);
+      return;
     }
+
+    // Find this EXACT row object in the full hierarchy (handles duplicates correctly)
+    const fullIndex = rows.findIndex((r) => r === currentVisibleRow);
+    if (fullIndex === -1) {
+      // Shouldn't happen, but safety check
+      keyboardSelectedIndex.set(Math.min(currentIndex + 1, visibleRows.length - 1));
+      return;
+    }
+
+    const nextRowInFullHierarchy = rows[fullIndex + 1];
+
+    // If next row exists but is hidden (collapsed child), expand its parent
+    if (
+      nextRowInFullHierarchy &&
+      !nextRowInFullHierarchy.isVisible &&
+      nextRowInFullHierarchy.parentId
+    ) {
+      inventory.updateContract(nextRowInFullHierarchy.parentId, { isCollapsed: false });
+      // After expand, next press will move into the now-visible child
+      return;
+    }
+
+    // Otherwise move to next visible row
+    if (currentIndex < visibleRows.length - 1) {
+      keyboardSelectedIndex.set(currentIndex + 1);
+    }
+  },
+  previous: () => {
+    keyboardSelectedIndex.update((i) => Math.max(i - 1, 0));
   }
 };
 
-// --- Contract Form Modal ---
+// --- Auto-expand if navigating to hidden implementation ---
+
+function autoExpandIfNeeded(contract: ContractRecord) {
+  if (!contract) return;
+
+  const rows = get(hierarchicalContracts);
+  const row = rows.find((r) => r.contract.id === contract.id);
+
+  if (row?.isNested && !row.isVisible && row.parentId) {
+    const parentContract = get(inventory).find((c) => c.id === row.parentId);
+    if (parentContract?.isCollapsed) {
+      inventory.updateContract(row.parentId, { isCollapsed: false });
+    }
+  }
+}
+
+// --- Toast Notifications ---
+
+interface ToastState {
+  visible: boolean;
+  message: string;
+  type: 'info' | 'success' | 'error';
+}
+
+const toastState = writable<ToastState>({
+  visible: false,
+  message: '',
+  type: 'info'
+});
+
+export const toastList = derived(toastState, ($state) => {
+  if (!$state.visible) return [];
+  return [
+    {
+      id: Date.now().toString(),
+      message: $state.message,
+      type: $state.type
+    }
+  ];
+});
+
+export const toast = {
+  ...toastState,
+  show: (message: string, type: 'info' | 'success' | 'error' = 'info', duration = 3000) => {
+    toastState.set({ visible: true, message, type });
+    if (duration > 0) {
+      setTimeout(() => {
+        toastState.update((t) => ({ ...t, visible: false }));
+      }, duration);
+    }
+  },
+  hide: () => {
+    toastState.update((t) => ({ ...t, visible: false }));
+  }
+};
+
+// --- Contract Form State ---
 
 interface ContractFormState {
   open: boolean;
@@ -157,9 +218,7 @@ interface ContractFormState {
 }
 
 const contractFormState = writable<ContractFormState>({
-  open: false,
-  initialAddress: undefined,
-  initialChainId: undefined
+  open: false
 });
 
 export const contractFormOpen = derived(contractFormState, ($s) => $s.open);
@@ -171,52 +230,5 @@ export function openContractForm(initialAddress?: string, initialChainId?: numbe
 }
 
 export function closeContractForm() {
-  contractFormState.set({ open: false, initialAddress: undefined, initialChainId: undefined });
-}
-
-// --- Toast Notifications ---
-
-interface Toast {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
-
-const toasts = writable<Toast[]>([]);
-
-export const toastList = { subscribe: toasts.subscribe };
-
-export const toast = {
-  show: (message: string, type: 'success' | 'error' | 'info' = 'success', duration = 2000) => {
-    const id = crypto.randomUUID();
-    toasts.update((list) => [...list, { id, message, type }]);
-
-    setTimeout(() => {
-      toasts.update((list) => list.filter((t) => t.id !== id));
-    }, duration);
-  },
-
-  dismiss: (id: string) => {
-    toasts.update((list) => list.filter((t) => t.id !== id));
-  }
-};
-
-// --- Helper Functions ---
-
-/**
- * Auto-expand proxy if navigating to a hidden nested implementation
- */
-function autoExpandIfNeeded(contract: ContractRecord) {
-  if (!contract) return;
-
-  const rows = get(hierarchicalContracts);
-  const row = rows.find((r) => r.contract.id === contract.id);
-
-  // If this is a nested implementation that's hidden, expand its parent
-  if (row?.isNested && !row.isVisible && row.parentId) {
-    const parentContract = get(inventory).find((c) => c.id === row.parentId);
-    if (parentContract?.isCollapsed) {
-      inventory.updateContract(row.parentId, { isCollapsed: false });
-    }
-  }
+  contractFormState.set({ open: false });
 }

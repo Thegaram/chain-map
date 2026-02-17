@@ -21,8 +21,8 @@
       class="toast toast-{item.type || 'success'}"
       role="button"
       tabindex="0"
-      on:click={() => toast.dismiss(item.id)}
-      on:keydown={(e) => (e.key === 'Enter' || e.key === ' ' ? toast.dismiss(item.id) : null)}
+      on:click={() => toast.hide()}
+      on:keydown={(e) => (e.key === 'Enter' || e.key === ' ' ? toast.hide() : null)}
     >
       <span class="toast-icon">{getIcon(item.type)}</span>
       <span class="toast-message">{item.message}</span>
