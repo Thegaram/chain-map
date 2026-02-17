@@ -44,10 +44,23 @@
   let abiError: string | null = null;
   let showApiKeyInput = false;
   let apiKeyInput = '';
+  let lastImplAbiFetchId: string | null = null; // Track last implementation we tried to fetch ABI for
 
   // Auto-fetch ABIs and call parameter-free view functions on mount
   $: if (contract && !contract.abi && chain) {
     fetchAbi();
+  }
+
+  // Auto-fetch implementation ABI if viewing proxy and implementation exists but has no ABI
+  $: if (
+    isProxy &&
+    implementationContract &&
+    !implementationContract.abi &&
+    chain &&
+    implementationContract.id !== lastImplAbiFetchId
+  ) {
+    lastImplAbiFetchId = implementationContract.id;
+    fetchImplementationAbi();
   }
 
   $: if (hasAbi && contract) {
@@ -76,6 +89,39 @@
       }
     } catch (error: any) {
       console.error('Failed to fetch ABI:', error);
+      abiError = error.message;
+
+      // Check if it's an API key error
+      if (error.message.includes('API key')) {
+        showApiKeyInput = true;
+      }
+    } finally {
+      loadingAbi = false;
+    }
+  }
+
+  async function fetchImplementationAbi() {
+    if (!implementationContract || !chain || loadingAbi) return;
+
+    loadingAbi = true;
+    abiError = null;
+
+    try {
+      const result = await fetchAbiSmart(implementationContract.address, chain);
+
+      if (result) {
+        inventory.updateContract(implementationContract.id, {
+          abi: result.abi,
+          abiSource: 'explorer',
+          abiContractName: result.contractName
+        });
+        await saveIfDirty();
+        toast.show(`Loaded implementation ABI: ${result.contractName || 'Contract'}`);
+      } else {
+        abiError = 'Implementation contract ABI not verified on explorer';
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch implementation ABI:', error);
       abiError = error.message;
 
       // Check if it's an API key error
@@ -219,20 +265,18 @@
         </button>
       {/if}
     </div>
-  {:else if isProxy && !implementationContract?.abi}
-    <!-- Proxy with implementation but no ABI -->
+  {:else if isProxy && implementationContract && !implementationContract.abi}
+    <!-- Proxy with implementation but no ABI - auto-fetching -->
     <div class="info-banner">
-      <p class="banner-text">ⓘ Implementation ABI not available. Fetch from explorer?</p>
-      <button
-        class="fetch-impl-abi-btn"
-        on:click={() => {
-          if (implementationContract) {
-            openDrawer(implementationContract.id);
-          }
-        }}
-      >
-        Open Implementation
-      </button>
+      <p class="banner-text">
+        {#if loadingAbi}
+          ⏳ Fetching implementation ABI from explorer...
+        {:else if abiError}
+          ⚠ Failed to fetch implementation ABI: {abiError}
+        {:else}
+          ⓘ Implementation ABI not available
+        {/if}
+      </p>
     </div>
   {/if}
 
@@ -467,8 +511,7 @@
     margin: 0;
   }
 
-  .add-impl-btn,
-  .fetch-impl-abi-btn {
+  .add-impl-btn {
     padding: var(--space-xs) var(--space-md);
     background: var(--accent);
     color: white;
@@ -481,8 +524,7 @@
     align-self: flex-start;
   }
 
-  .add-impl-btn:hover,
-  .fetch-impl-abi-btn:hover {
+  .add-impl-btn:hover {
     background: var(--accent-hover);
   }
 
