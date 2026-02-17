@@ -170,12 +170,7 @@
           <span class="saved-indicator">✓</span>
         {/if}
       </div>
-      <input
-        id="label"
-        type="text"
-        bind:value={editedLabel}
-        on:blur={handleLabelBlur}
-      />
+      <input id="label" type="text" bind:value={editedLabel} on:blur={handleLabelBlur} />
     </div>
 
     <div class="field-group">
@@ -362,7 +357,10 @@
                   class="add-btn-impl"
                   on:click={() => {
                     closeDrawer();
-                    setTimeout(() => openContractForm(contract!.implementation, contract!.chainId), 100);
+                    setTimeout(
+                      () => openContractForm(contract!.implementation, contract!.chainId),
+                      100
+                    );
                   }}
                   title="Add to inventory"
                 >
